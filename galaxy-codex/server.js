@@ -36,7 +36,7 @@ loadCache();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'YOUR_API_KEY');
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-app.get('/api/expand', async (req, res) => {
+app.get('/galaxy-api/expand', async (req, res) => {
   const { topic } = req.query;
 
   if (!topic) {

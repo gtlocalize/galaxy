@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@react-three/postprocessing": "^3.0.4",
+    "d3": "^7.9.0",
+    "d3-force-3d": "^3.0.6",
+    "framer-motion": "^12.23.24",
+    "postprocessing": "^6.38.0",
+    "three-stdlib": "^2.36.1",
+    "uuid": "^13.0.0"
+  }
+}

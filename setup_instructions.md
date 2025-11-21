@@ -46,7 +46,7 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    location /api {
+    location /galaxy-api {
         proxy_pass http://localhost:3001; # Express Backend
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

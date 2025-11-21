@@ -5,7 +5,7 @@ const useStore = create((set, get) => ({
   activeNode: 'ai_root',
   graphData: {
     nodes: [
-      { id: 'ai_root', name: 'Artificial Intelligence', val: 50, color: '#ffffff' }
+      { id: 'ai_root', name: 'Artificial Intelligence', val: 80, color: '#00ffff' }
     ],
     links: []
   },
@@ -28,8 +28,8 @@ const useStore = create((set, get) => ({
 
     try {
       // Call backend API
-      // For now, we'll assume the backend is running on /api/expand
-      const response = await fetch(`/api/expand?topic=${encodeURIComponent(node.name)}`);
+      // The backend is running on /galaxy-api/expand
+      const response = await fetch(`/galaxy-api/expand?topic=${encodeURIComponent(node.name)}`);
       if (!response.ok) throw new Error('Failed to fetch expansion data');
       
       const data = await response.json(); 
