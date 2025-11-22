@@ -1,35 +1,37 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Stars, Text, Billboard } from '@react-three/drei';
+import { OrbitControls, Stars, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { forceSimulation, forceManyBody, forceLink, forceCenter } from 'd3-force-3d';
 import useStore from '../store/useStore';
 
+// Shared scratch vectors to avoid garbage collection
+const _vec3_1 = new THREE.Vector3();
+const _vec3_2 = new THREE.Vector3();
+const _vec3_3 = new THREE.Vector3();
+
 // A component to handle the camera flying to a target
 const CameraController = ({ focusNode }) => {
   const { camera, controls } = useThree();
-  const vec = new THREE.Vector3();
 
   useFrame((state, delta) => {
     if (focusNode && focusNode.x !== undefined) {
-      // Calculate target position (offset from node)
       const distance = 40;
       const distRatio = 1 + distance / Math.hypot(focusNode.x, focusNode.y, focusNode.z);
       
-      const targetPos = {
-        x: focusNode.x * distRatio,
-        y: focusNode.y * distRatio,
-        z: focusNode.z * distRatio
-      };
+      const tx = focusNode.x * distRatio;
+      const ty = focusNode.y * distRatio;
+      const tz = focusNode.z * distRatio;
 
-      // Lerp camera position
-      state.camera.position.lerp(vec.set(targetPos.x, targetPos.y, targetPos.z), delta * 2);
+      // Lerp camera
+      _vec3_1.set(tx, ty, tz);
+      state.camera.position.lerp(_vec3_1, delta * 2);
       
-      // Make camera look at the node
-      // controls.target is used by OrbitControls
+      // Lerp target
       if (controls) {
-        controls.target.lerp(vec.set(focusNode.x, focusNode.y, focusNode.z), delta * 2);
+        _vec3_2.set(focusNode.x, focusNode.y, focusNode.z);
+        controls.target.lerp(_vec3_2, delta * 2);
         controls.update();
       }
     }
@@ -43,7 +45,6 @@ const GraphContent = () => {
   const [renderNodes, setRenderNodes] = useState([]);
   const [renderLinks, setRenderLinks] = useState([]);
   
-  // Simulation State
   const simulation = useMemo(() => {
     return forceSimulation()
       .numDimensions(3)
@@ -52,7 +53,6 @@ const GraphContent = () => {
       .force('center', forceCenter());
   }, []);
 
-  // Update simulation when data changes
   useEffect(() => {
     const currentSimNodes = simulation.nodes();
     const simNodeMap = new Map(currentSimNodes.map(n => [n.id, n]));
@@ -62,12 +62,8 @@ const GraphContent = () => {
         if (existing) {
             return { 
               ...n, 
-              x: existing.x, 
-              y: existing.y, 
-              z: existing.z, 
-              vx: existing.vx, 
-              vy: existing.vy, 
-              vz: existing.vz 
+              x: existing.x, y: existing.y, z: existing.z, 
+              vx: existing.vx, vy: existing.vy, vz: existing.vz 
             };
         } else {
             return { ...n }; 
@@ -99,7 +95,6 @@ const GraphContent = () => {
 
   }, [graphData, simulation]);
 
-  // Animation Loop
   useFrame(() => {
     simulation.tick();
   });
@@ -109,12 +104,10 @@ const GraphContent = () => {
       <CameraController focusNode={focusNode} />
       
       <group>
-        {/* Links */}
         {renderLinks.map((link) => (
             <GraphLink key={`${link.source.id}-${link.target.id}`} link={link} />
         ))}
 
-        {/* Nodes */}
         {renderNodes.map((node) => (
           <GraphNode 
             key={node.id} 
@@ -132,7 +125,6 @@ const GraphContent = () => {
   );
 };
 
-// Individual Node Component
 const GraphNode = ({ node, onNodeClick }) => {
   const ref = useRef();
   
@@ -159,24 +151,23 @@ const GraphNode = ({ node, onNodeClick }) => {
         <meshBasicMaterial color={color} wireframe transparent opacity={0.2} toneMapped={false} />
       </mesh>
 
-      <Billboard>
-        <Text
-          position={[0, size * 2, 0]}
-          fontSize={3}
-          color={color}
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.1}
-          outlineColor="#000000"
-        >
-          {node.name}
-        </Text>
-      </Billboard>
+      {/* Removed 3D Text to fix Context Lost crash */}
+      {/* Replaced with HTML label for stability */}
+      <Html position={[0, size * 2 + 2, 0]} center distanceFactor={15} style={{ pointerEvents: 'none' }}>
+        <div style={{ 
+            color: color, 
+            fontFamily: 'sans-serif', 
+            fontSize: '12px', 
+            textShadow: '0 0 2px black',
+            whiteSpace: 'nowrap'
+        }}>
+            {node.name}
+        </div>
+      </Html>
     </group>
   );
 };
 
-// Link Component
 const GraphLink = ({ link }) => {
   const ref = useRef();
   
@@ -186,14 +177,17 @@ const GraphLink = ({ link }) => {
         const tx = link.target.x, ty = link.target.y, tz = link.target.z;
 
         if (!isNaN(sx) && !isNaN(tx)) {
-            const start = new THREE.Vector3(sx, sy, sz);
-            const end = new THREE.Vector3(tx, ty, tz);
+            // Optimize: Use shared vectors
+            _vec3_1.set(sx, sy, sz); // Start
+            _vec3_2.set(tx, ty, tz); // End
             
-            const distance = start.distanceTo(end);
-            const position = start.clone().add(end).multiplyScalar(0.5);
+            const distance = _vec3_1.distanceTo(_vec3_2);
             
-            ref.current.position.copy(position);
-            ref.current.lookAt(end);
+            // Midpoint: (Start + End) * 0.5
+            _vec3_3.copy(_vec3_1).add(_vec3_2).multiplyScalar(0.5);
+            
+            ref.current.position.copy(_vec3_3);
+            ref.current.lookAt(_vec3_2);
             ref.current.scale.z = distance;
         }
     }
@@ -207,7 +201,6 @@ const GraphLink = ({ link }) => {
   );
 };
 
-// Main Scene Wrapper
 const GalaxyScene = () => {
   return (
     <Canvas 
@@ -220,12 +213,11 @@ const GalaxyScene = () => {
     >
       <OrbitControls enableDamping dampingFactor={0.1} rotateSpeed={0.5} />
       
-      {/* Reduced Stars count to be safe */}
       <Stars radius={300} depth={50} count={500} factor={4} saturation={0} fade speed={1} />
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
 
-      {/* DISABLED BLOOM FOR DEBUGGING */}
+      {/* Bloom still disabled for this test step */}
       {/* <EffectComposer disableNormalPass>
         <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
       </EffectComposer> */}
