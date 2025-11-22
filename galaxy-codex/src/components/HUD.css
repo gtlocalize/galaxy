@@ -199,6 +199,7 @@
   margin: 0;
   font: inherit;
   display: inline;
+  white-space: nowrap;
 
   /* Link styling */
   color: #00ffff;
@@ -279,4 +280,15 @@
   50% {
     opacity: 1;
   }
+}
+
+/* Streaming cursor */
+.streaming-cursor {
+  color: #00ffff;
+  animation: blink 0.7s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }

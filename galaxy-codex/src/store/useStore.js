@@ -45,45 +45,86 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
     const node = graphData.nodes.find(n => n.id === nodeId);
     const name = topicName || node?.name || 'Unknown Topic';
 
-    if (node && (node.content || node.tabs)) return; // Already has content
+    if (node && node.content) return; // Already has content
 
-    // Fallback content when API fails
-    const fallbackTabs = [
-      {
-        id: 'overview',
-        label: 'Overview',
-        content: `# ${name}\n\nContent temporarily unavailable due to API limits. This topic covers important concepts in AI and machine learning.\n\n**Key areas to explore:**\n- [[Machine Learning]] fundamentals\n- [[Neural Networks]] architecture\n- [[Deep Learning]] applications\n\nTry again later for full content.`
+    // Set initial streaming state
+    set(state => ({
+      graphData: {
+        ...state.graphData,
+        nodes: state.graphData.nodes.map(n =>
+          n.id === nodeId ? { ...n, content: '', streaming: true } : n
+        )
       }
-    ];
+    }));
 
     try {
-      const response = await fetch(`/galaxy-api/expand?topic=${encodeURIComponent(name)}`);
-      if (!response.ok) throw new Error('Failed to fetch content');
+      const eventSource = new EventSource(`/galaxy-api/expand-stream?topic=${encodeURIComponent(name)}`);
 
-      const data = await response.json();
+      eventSource.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
 
-      // Check if we got an error response
-      if (data.error) throw new Error(data.error);
-
-      set(state => ({
-        graphData: {
-          ...state.graphData,
-          nodes: state.graphData.nodes.map(n =>
-            n.id === nodeId
-              ? { ...n, tabs: data.tabs, category: data.category || 'Core AI' }
-              : n
-          )
+        if (msg.type === 'chunk') {
+          // Append chunk to content
+          set(state => ({
+            graphData: {
+              ...state.graphData,
+              nodes: state.graphData.nodes.map(n =>
+                n.id === nodeId ? { ...n, content: (n.content || '') + msg.text } : n
+              )
+            }
+          }));
+        } else if (msg.type === 'complete') {
+          // Final update
+          set(state => ({
+            graphData: {
+              ...state.graphData,
+              nodes: state.graphData.nodes.map(n =>
+                n.id === nodeId
+                  ? { ...n, content: msg.data.content, category: msg.data.category, streaming: false }
+                  : n
+              )
+            }
+          }));
+          eventSource.close();
+        } else if (msg.type === 'error') {
+          console.error('Stream error:', msg.message);
+          set(state => ({
+            graphData: {
+              ...state.graphData,
+              nodes: state.graphData.nodes.map(n =>
+                n.id === nodeId
+                  ? { ...n, content: `# ${name}\n\nFailed to load content. Try again later.`, streaming: false }
+                  : n
+              )
+            }
+          }));
+          eventSource.close();
         }
-      }));
+      };
+
+      eventSource.onerror = () => {
+        console.error('EventSource error');
+        eventSource.close();
+        set(state => ({
+          graphData: {
+            ...state.graphData,
+            nodes: state.graphData.nodes.map(n =>
+              n.id === nodeId
+                ? { ...n, content: `# ${name}\n\nConnection error. Try again later.`, streaming: false }
+                : n
+            )
+          }
+        }));
+      };
+
     } catch (error) {
       console.error('Error fetching node content:', error);
-      // Set fallback content so UI doesn't spin forever
       set(state => ({
         graphData: {
           ...state.graphData,
           nodes: state.graphData.nodes.map(n =>
             n.id === nodeId
-              ? { ...n, tabs: fallbackTabs, category: 'Core AI', apiError: true }
+              ? { ...n, content: `# ${name}\n\nFailed to load. Try again.`, streaming: false }
               : n
           )
         }

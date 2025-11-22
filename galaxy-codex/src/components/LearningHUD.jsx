@@ -1,23 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
-import MermaidRenderer from './MermaidRenderer';
 import './HUD.css';
 
 const LearningHUD = () => {
   const { activeNode, graphData, handleLinkClick } = useStore();
-  const [activeTab, setActiveTab] = useState('overview');
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
-  // Reset tab when node changes
-  useEffect(() => {
-    setActiveTab('overview');
-  }, [activeNode]);
-
   if (!currentNode) return null;
-
-  const currentTabContent = currentNode.tabs?.find(t => t.id === activeTab);
 
   // Custom renderer - split content by [[wiki-links]] and render them as buttons
   const renderContent = (content) => {
@@ -60,36 +51,14 @@ const LearningHUD = () => {
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
-        {/* Content - handle both tabs format and legacy content format */}
-        {currentNode.tabs ? (
-          <>
-            <div className="hud-tabs">
-              {currentNode.tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`hud-tab ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="hud-content-scroll">
-              {activeTab === 'visuals' && currentTabContent?.diagram ? (
-                <MermaidRenderer chart={currentTabContent.diagram} />
-              ) : (
-                <div className="rich-content">
-                  {renderContent(currentTabContent?.content)}
-                </div>
-              )}
-            </div>
-          </>
-        ) : currentNode.content ? (
-          // Legacy format - just content string, no tabs
+        {/* Content */}
+        {currentNode.content ? (
           <div className="hud-content-scroll">
             <div className="rich-content">
               {renderContent(currentNode.content)}
+              {currentNode.streaming && (
+                <span className="streaming-cursor">▌</span>
+              )}
             </div>
           </div>
         ) : (
