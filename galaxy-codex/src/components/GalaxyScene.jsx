@@ -47,24 +47,19 @@ const GraphContent = () => {
   const simulation = useMemo(() => {
     return forceSimulation()
       .numDimensions(3)
-      .force('link', forceLink().id(d => d.id).distance(60)) // Increased distance
-      .force('charge', forceManyBody().strength(-150)) // Increased repulsion
+      .force('link', forceLink().id(d => d.id).distance(60))
+      .force('charge', forceManyBody().strength(-150))
       .force('center', forceCenter());
   }, []);
 
-  // Update simulation when data changes - preserving state to avoid crashes
+  // Update simulation when data changes
   useEffect(() => {
-    // 1. Get current simulation nodes (to preserve their positions/velocity)
     const currentSimNodes = simulation.nodes();
-    
-    // 2. Create a map for fast lookup of existing physics state
     const simNodeMap = new Map(currentSimNodes.map(n => [n.id, n]));
 
-    // 3. Prepare new nodes, preserving state if exists
     const newNodes = graphData.nodes.map(n => {
         const existing = simNodeMap.get(n.id);
         if (existing) {
-            // Update properties (like color/val) but keep physics state (x, y, z, vx, vy, vz)
             return { 
               ...n, 
               x: existing.x, 
@@ -75,20 +70,13 @@ const GraphContent = () => {
               vz: existing.vz 
             };
         } else {
-            // New node - D3 will initialize x,y,z
-            // Can optionally set initial position near parent if we knew who triggered it, 
-            // but for now random spawn is fine (or 0,0,0)
             return { ...n }; 
         }
     });
 
-    // 4. Prepare links
-    // D3 mutates links to replace string IDs with object references.
-    // We must ensure we pass object references that match the 'newNodes' array exactly.
     const nodeMap = new Map(newNodes.map(n => [n.id, n]));
     
     const newLinks = graphData.links.map(l => {
-        // The source/target in graphData might be strings (IDs) or objects (if came from store that way)
         const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
         const targetId = typeof l.target === 'object' ? l.target.id : l.target;
 
@@ -97,14 +85,12 @@ const GraphContent = () => {
             source: nodeMap.get(sourceId),
             target: nodeMap.get(targetId)
         };
-    }).filter(l => l.source && l.target); // Safety filter
+    }).filter(l => l.source && l.target);
 
-    // 5. Update simulation
     simulation.nodes(newNodes);
     simulation.force('link').links(newLinks);
     
-    // 6. Re-heat simulation slightly if nodes changed
-    if (newNodes.length !== currentSimNodes.length || newLinks.length !== simulation.force('link').links().length) {
+    if (newNodes.length !== currentSimNodes.length) {
         simulation.alpha(1).restart();
     }
 
@@ -115,7 +101,7 @@ const GraphContent = () => {
 
   // Animation Loop
   useFrame(() => {
-    simulation.tick(); // Tick physics
+    simulation.tick();
   });
 
   return (
@@ -137,7 +123,7 @@ const GraphContent = () => {
                 setFocusNode(node);
                 setActiveNode(node.id);
                 await expandNode(node.id);
-                simulation.alpha(0.3).restart(); // Gentle restart
+                simulation.alpha(0.3).restart();
             }} 
           />
         ))}
@@ -152,7 +138,6 @@ const GraphNode = ({ node, onNodeClick }) => {
   
   useFrame(() => {
     if (ref.current && node.x !== undefined) {
-      // Check for NaN to prevent crashes
       if (!isNaN(node.x) && !isNaN(node.y) && !isNaN(node.z)) {
         ref.current.position.set(node.x, node.y, node.z);
       }
@@ -164,23 +149,20 @@ const GraphNode = ({ node, onNodeClick }) => {
 
   return (
     <group ref={ref} onClick={(e) => { e.stopPropagation(); onNodeClick(); }}>
-      {/* Core */}
       <mesh>
         <sphereGeometry args={[size, 16, 16]} />
         <meshBasicMaterial color={color} toneMapped={false} />
       </mesh>
       
-      {/* Wireframe Shell */}
       <mesh>
         <icosahedronGeometry args={[size * 1.4, 1]} />
         <meshBasicMaterial color={color} wireframe transparent opacity={0.2} toneMapped={false} />
       </mesh>
 
-      {/* Label */}
       <Billboard>
         <Text
           position={[0, size * 2, 0]}
-          fontSize={3} // Slightly smaller text
+          fontSize={3}
           color={color}
           anchorX="center"
           anchorY="middle"
@@ -219,7 +201,6 @@ const GraphLink = ({ link }) => {
 
   return (
     <mesh ref={ref}>
-      {/* Thin laser beam */}
       <boxGeometry args={[0.1, 0.1, 1]} />
       <meshBasicMaterial color="#4444aa" transparent opacity={0.3} toneMapped={false} />
     </mesh>
@@ -232,24 +213,23 @@ const GalaxyScene = () => {
     <Canvas 
       camera={{ position: [0, 0, 100], fov: 60 }} 
       style={{ background: '#000000' }}
-      gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+      gl={{ antialias: true, alpha: false }}
       onCreated={({ gl }) => {
         gl.setClearColor('#000000');
       }}
     >
       <OrbitControls enableDamping dampingFactor={0.1} rotateSpeed={0.5} />
       
-      {/* Environment */}
-      <Stars radius={300} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
+      {/* Reduced Stars count to be safe */}
+      <Stars radius={300} depth={50} count={500} factor={4} saturation={0} fade speed={1} />
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
 
-      {/* Post Processing */}
-      <EffectComposer disableNormalPass>
+      {/* DISABLED BLOOM FOR DEBUGGING */}
+      {/* <EffectComposer disableNormalPass>
         <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-      </EffectComposer>
+      </EffectComposer> */}
 
-      {/* Graph */}
       <GraphContent />
     </Canvas>
   );
