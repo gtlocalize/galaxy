@@ -5,10 +5,10 @@ const useStore = create((set, get) => ({
   activeNode: 'Artificial Intelligence', // Start focused on root
   graphData: {
     nodes: [
-      { 
-        id: 'Artificial Intelligence', 
-        name: 'Artificial Intelligence', 
-        val: 80, 
+      {
+        id: 'Artificial Intelligence',
+        name: 'Artificial Intelligence',
+        val: 80,
         color: '#00ffff',
         category: 'Core AI',
         // Initial content to get started without API call if needed
@@ -35,112 +35,75 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
   // Actions
   setActiveNode: (nodeId) => set({ activeNode: nodeId }),
 
-  // Expand Node: Fetches rich content and spawns children based on [[wikilinks]]
   expandNode: async (nodeId) => {
+    // This is now mostly internal or used for initial expansion
+    // Real expansion happens via handleLinkClick
+  },
+
+  fetchNodeContent: async (nodeId, topicName) => {
     const { graphData } = get();
     const node = graphData.nodes.find(n => n.id === nodeId);
-    
-    // If node already has processed content (and thus children spawned), we might just want to ensure it's active.
-    // But maybe we want to re-fetch if it was just a stub?
-    // We check if 'content' is fully populated (length > 100 is a heuristic, or a flag).
-    const isStub = !node.content || node.content.length < 100;
 
-    if (!isStub) {
-      console.log('Node already expanded/loaded:', nodeId);
-      return;
-    }
+    if (node && node.content) return; // Already has content
 
     try {
-      // Call backend API
-      const response = await fetch(`/galaxy-api/expand?topic=${encodeURIComponent(node.name)}`);
-      
-      let data;
-      if (response.ok) {
-        data = await response.json();
-      } else {
-        throw new Error('Backend failed');
-      }
+      const response = await fetch(`/galaxy-api/expand?topic=${encodeURIComponent(topicName || node.name)}`);
+      if (!response.ok) throw new Error('Failed to fetch content');
 
-      // 1. Update the current node with rich content
-      const updatedNode = {
-        ...node,
-        category: data.category,
-        content: data.content
-      };
-
-      // 2. Parse [[wikilinks]] to find children
-      const linkRegex = /\[\[(.*?)\]\]/g;
-      const matches = [...data.content.matchAll(linkRegex)];
-      const childNames = matches.map(m => m[1]); // Extract term inside brackets
-      
-      const uniqueChildren = [...new Set(childNames)]; // Dedupe
-
-      // 3. Create new Stub Nodes for children
-      const newNodes = [];
-      const newLinks = [];
-
-      uniqueChildren.forEach(childName => {
-        // Check if node exists
-        const exists = graphData.nodes.find(n => n.id === childName);
-        
-        if (!exists) {
-          newNodes.push({
-            id: childName,
-            name: childName,
-            val: 20, // Smaller size for children
-            color: '#aaddff', // Default color, could be based on category later
-            content: '' // Stub content
-          });
-        }
-
-        // Check if link exists
-        const linkExists = graphData.links.some(l => 
-          (l.source === nodeId || l.source.id === nodeId) && 
-          (l.target === childName || l.target.id === childName)
-        );
-
-        if (!linkExists) {
-          newLinks.push({
-            source: nodeId,
-            target: childName
-          });
-        }
-      });
-
-      // 4. Update Graph Data
-      // We replace the expanded node in the array and add new ones
-      const updatedNodes = graphData.nodes.map(n => n.id === nodeId ? updatedNode : n);
+      const data = await response.json();
 
       set(state => ({
         graphData: {
-          nodes: [...updatedNodes, ...newNodes],
-          links: [...state.graphData.links, ...newLinks]
+          ...state.graphData,
+          nodes: state.graphData.nodes.map(n =>
+            n.id === nodeId
+              ? { ...n, content: data.content, category: data.category, summary: null } // Replace summary with full content
+              : n
+          )
         }
       }));
-
     } catch (error) {
-      console.error('Error expanding node:', error);
-      // Fallback for demo/offline
-      console.log('Using offline fallback');
-      
-      const fallbackContent = `
-# ${node.name} (Offline)
-
-Content could not be fetched. Imagine a great article here about **${node.name}**.
-
-## Related Topics
-- [[Machine Learning]]
-- [[Neural Networks]]
-- [[Data Science]]
-      `;
-      
-      const updatedNode = { ...node, content: fallbackContent };
-      // We won't spawn children in fallback to avoid infinite loops of bad data, 
-      // unless we parse the fallback content specifically.
-      
-      const updatedNodes = graphData.nodes.map(n => n.id === nodeId ? updatedNode : n);
-      set({ graphData: { ...graphData, nodes: updatedNodes } });
+      console.error('Error fetching node content:', error);
     }
+  },
+
+  handleLinkClick: async (term, parentNodeId) => {
+    const { graphData, setActiveNode, fetchNodeContent } = get();
+
+    // 1. Check if node already exists
+    const existingNode = graphData.nodes.find(n => n.name.toLowerCase() === term.toLowerCase());
+
+    if (existingNode) {
+      setActiveNode(existingNode.id);
+      // Fly to it (handled by GalaxyScene observing activeNode)
+      return;
+    }
+
+    // 2. Create new node
+    const newNodeId = `${parentNodeId}_${term.replace(/\s+/g, '_')}`;
+    const newNode = {
+      id: newNodeId,
+      name: term,
+      val: 20,
+      color: '#aaddff', // Default, will be updated by category later
+      parent: parentNodeId
+    };
+
+    const newLink = {
+      source: parentNodeId,
+      target: newNodeId
+    };
+
+    set(state => ({
+      graphData: {
+        nodes: [...state.graphData.nodes, newNode],
+        links: [...state.graphData.links, newLink]
+      },
+      activeNode: newNodeId
+    }));
+
+    // 3. Fetch content for the new node
+    await get().fetchNodeContent(newNodeId, term);
   }
 }));
 

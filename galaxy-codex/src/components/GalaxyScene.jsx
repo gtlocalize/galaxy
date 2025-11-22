@@ -11,7 +11,7 @@ const GalaxyScene = () => {
   useEffect(() => {
     if (fgRef.current) {
       const scene = fgRef.current.scene();
-      
+
       // Create stars
       const starGeometry = new THREE.BufferGeometry();
       const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0.8 });
@@ -25,16 +25,27 @@ const GalaxyScene = () => {
       starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
-      
+
       // Add ambient glow/lights
-      const ambientLight = new THREE.AmbientLight(0x404040, 2); 
+      const ambientLight = new THREE.AmbientLight(0x404040, 2);
       scene.add(ambientLight);
-      
+
       const pointLight = new THREE.PointLight(0xffffff, 1);
       pointLight.position.set(100, 100, 100);
       scene.add(pointLight);
     }
   }, []);
+
+  // Category Colors
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'Core AI': return '#00ffff'; // Cyan
+      case 'Applications': return '#00ff00'; // Green
+      case 'Theory': return '#aa00ff'; // Purple
+      case 'Tools': return '#ffaa00'; // Orange
+      default: return '#aaddff'; // Default Light Blue
+    }
+  };
 
   const handleClick = useCallback(async (node) => {
     if (!fgRef.current) return;
@@ -46,18 +57,18 @@ const GalaxyScene = () => {
 
     // Fly camera logic
     const distance = 60;
-    const distRatio = 1 + distance/Math.hypot(x, y, z);
+    const distRatio = 1 + distance / Math.hypot(x, y, z);
 
     // Handle origin case (0,0,0) to prevent Infinity/NaN
     let targetX = 0, targetY = 0, targetZ = 0;
-    if (!x && !y && !z) { // If all are 0 or undefined
-        targetX = 0;
-        targetY = 0;
-        targetZ = distance; // Just back up on Z
+    if (!x && !y && !z) {
+      targetX = 0;
+      targetY = 0;
+      targetZ = distance;
     } else {
-        targetX = x * distRatio;
-        targetY = y * distRatio;
-        targetZ = z * distRatio;
+      targetX = x * distRatio;
+      targetY = y * distRatio;
+      targetZ = z * distRatio;
     }
 
     fgRef.current.cameraPosition(
@@ -67,18 +78,20 @@ const GalaxyScene = () => {
     );
 
     setActiveNode(id);
-    await expandNode(id);
-  }, [expandNode, setActiveNode]);
+    // NO EXPANSION ON CLICK - Interaction Model Change
+    // await expandNode(id); 
+  }, [setActiveNode]);
 
   // Custom Node Object: Glowing Sphere
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
+    const color = getCategoryColor(node.category) || node.color || '#00ffff';
 
     // 1. The Glowing Sphere
     const geometry = new THREE.SphereGeometry(node.val ? node.val / 5 : 4, 32, 32);
     const material = new THREE.MeshPhysicalMaterial({
-      color: node.color || '#00ffff',
-      emissive: node.color || '#00ffff',
+      color: color,
+      emissive: color,
       emissiveIntensity: 0.5,
       roughness: 0.1,
       metalness: 0.1,
@@ -91,10 +104,10 @@ const GalaxyScene = () => {
     // 2. Wireframe Overlay
     const wireGeo = new THREE.IcosahedronGeometry((node.val ? node.val / 5 : 4) * 1.2, 1);
     const wireMat = new THREE.MeshBasicMaterial({
-        color: node.color || '#00ffff',
-        wireframe: true,
-        transparent: true,
-        opacity: 0.15
+      color: color,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.15
     });
     const wire = new THREE.Mesh(wireGeo, wireMat);
     group.add(wire);
@@ -104,32 +117,32 @@ const GalaxyScene = () => {
 
   return (
     <div style={{ width: '100%', height: '100%', background: '#000' }}>
-        <ForceGraph3D
-          ref={fgRef}
-          graphData={graphData}
-          
-          // Global Config
-          backgroundColor="#000000"
-          showNavInfo={false}
-          
-          // Physics
-          d3VelocityDecay={0.1}
-          cooldownTicks={100}
-          
-          // Link Styling
-          linkColor={() => '#4444aa'}
-          linkOpacity={0.3}
-          linkWidth={0.5}
-          linkDirectionalParticles={2}
-          linkDirectionalParticleWidth={2}
-          linkDirectionalParticleSpeed={0.005}
-          
-          // Custom Node Rendering
-          nodeThreeObjectExtend={false}
-          nodeThreeObject={nodeThreeObject}
-          
-          onNodeClick={handleClick}
-        />
+      <ForceGraph3D
+        ref={fgRef}
+        graphData={graphData}
+
+        // Global Config
+        backgroundColor="#000000"
+        showNavInfo={false}
+
+        // Physics
+        d3VelocityDecay={0.1}
+        cooldownTicks={100}
+
+        // Link Styling
+        linkColor={() => '#4444aa'}
+        linkOpacity={0.3}
+        linkWidth={0.5}
+        linkDirectionalParticles={2}
+        linkDirectionalParticleWidth={2}
+        linkDirectionalParticleSpeed={0.005}
+
+        // Custom Node Rendering
+        nodeThreeObjectExtend={false}
+        nodeThreeObject={nodeThreeObject}
+
+        onNodeClick={handleClick}
+      />
     </div>
   );
 };
