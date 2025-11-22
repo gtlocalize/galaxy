@@ -3,25 +3,23 @@
   position: absolute;
   top: 40px;
   right: 40px;
-  width: 600px;
+  width: 720px;
   /* Wider as requested */
   height: 85vh;
   display: flex;
   flex-direction: column;
 
-  /* Glassmorphism & Holographic Effect - Enhanced */
-  background: rgba(10, 20, 30, 0.4);
-  /* More transparent */
-  backdrop-filter: blur(40px) saturate(180%);
-  /* Stronger blur */
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  /* Glassmorphism & Holographic Effect */
+  background: rgba(10, 20, 30, 0.6);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 
   /* Glowing Border */
   border: 1px solid rgba(100, 200, 255, 0.3);
   border-radius: 16px;
   box-shadow:
-    0 0 40px rgba(0, 100, 255, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    0 0 30px rgba(0, 100, 255, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 
   /* Typography */
   font-family: 'Inter', 'Roboto', sans-serif;
@@ -29,17 +27,33 @@
 
   /* 3D Transform & Animation */
   transform-style: preserve-3d;
-  /* Transform is now handled by inline styles for interactivity */
+  transform: perspective(1500px) rotateY(-10deg) translateX(0);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease;
 
+  /* Initial Float Animation */
+  animation: hudFloat 6s ease-in-out infinite;
   z-index: 100;
 }
 
 .hud-container:hover {
-  /* Interactive Tilt handled by JS now, just enhance glow */
+  /* Let JS handle tilt - just enhance glow */
   box-shadow:
-    0 0 60px rgba(0, 100, 255, 0.25),
-    0 0 0 1px rgba(100, 200, 255, 0.5) inset;
-  background: rgba(10, 20, 30, 0.5);
+    0 0 50px rgba(0, 100, 255, 0.2),
+    0 0 0 1px rgba(100, 200, 255, 0.4) inset;
+  background: rgba(10, 20, 30, 0.75);
+  animation-play-state: paused;
+}
+
+@keyframes hudFloat {
+
+  0%,
+  100% {
+    transform: perspective(1500px) rotateY(-10deg) translateY(0px);
+  }
+
+  50% {
+    transform: perspective(1500px) rotateY(-10deg) translateY(-15px);
+  }
 }
 
 /* Header */
@@ -318,24 +332,5 @@
   50% {
     opacity: 1;
     height: 100%;
-  }
-}
-
-/* Streaming cursor */
-.streaming-cursor {
-  color: #00ffff;
-  animation: blink 0.7s infinite;
-}
-
-@keyframes blink {
-
-  0%,
-  50% {
-    opacity: 1;
-  }
-
-  51%,
-  100% {
-    opacity: 0;
   }
 }

@@ -1,138 +1,90 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
-import MermaidRenderer from './MermaidRenderer';
 import './HUD.css';
 
 const LearningHUD = () => {
   const { activeNode, graphData, handleLinkClick } = useStore();
-  const [activeTab, setActiveTab] = useState('overview');
-  const containerRef = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
-  // Reset tab when node changes
-  useEffect(() => {
-    setActiveTab('overview');
-  }, [activeNode]);
-
-  if (!currentNode) return null;
-
-  const currentTabContent = currentNode.tabs?.find(t => t.id === activeTab);
-
-  // Tilt Effect Logic
+  // Interactive 3D tilt based on mouse position
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Calculate rotation (max 10 degrees)
-    // If mouse is left (x < w/2), rotateY should be negative (tilt left)
-    // If mouse is top (y < h/2), rotateX should be positive (tilt up)
-    const rotateY = ((x / rect.width) - 0.5) * 20;
-    const rotateX = -((y / rect.height) - 0.5) * 20;
-
-    setTilt({ x: rotateX, y: rotateY });
+    const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: y * 12, y: -x * 12 }); // Degrees of tilt
   };
 
   const handleMouseLeave = () => {
     setTilt({ x: 0, y: 0 });
   };
 
-  // Custom renderer for [[wiki-links]]
-  const renderContent = (content) => {
-    if (!content) return null;
+  if (!currentNode) return null;
 
-    // Pre-process: Convert [[link]] to [link](wiki:link)
-    // URL encode the term to handle spaces correctly
-    const processed = content.replace(/\[\[(.*?)\]\]/g, (match, term) => {
-      return `[${term}](wiki:${encodeURIComponent(term)})`;
+  // Process [[wiki-links]] inline within text
+  const processWikiLinks = (text) => {
+    if (typeof text !== 'string') return text;
+    const parts = text.split(/(\[\[.*?\]\])/g);
+    return parts.map((part, i) => {
+      const match = part.match(/^\[\[(.*?)\]\]$/);
+      if (match) {
+        return (
+          <span key={i} className="wiki-link" onClick={() => handleLinkClick(match[1], currentNode.id)}>
+            {match[1]}
+          </span>
+        );
+      }
+      return part;
     });
+  };
 
-    return (
-      <ReactMarkdown
-        components={{
-          a: ({ href, children }) => {
-            if (href && href.startsWith('wiki:')) {
-              const term = decodeURIComponent(href.replace('wiki:', ''));
-              return (
-                <span
-                  className="wiki-link"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation(); // Prevent bubbling
-                    handleLinkClick(term, currentNode.id);
-                  }}
-                >
-                  {children}
-                </span>
-              );
-            }
-            return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-          }
-        }}
-      >
-        {processed}
-      </ReactMarkdown>
-    );
+  // Custom components for ReactMarkdown - process wiki links inline
+  const markdownComponents = {
+    p: ({ children }) => <p>{processChildren(children)}</p>,
+    li: ({ children }) => <li>{processChildren(children)}</li>,
+    strong: ({ children }) => <strong>{processChildren(children)}</strong>,
+    em: ({ children }) => <em>{processChildren(children)}</em>,
+  };
+
+  const processChildren = (children) => {
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') return processWikiLinks(child);
+      return child;
+    });
+  };
+
+  const tiltStyle = {
+    transform: `perspective(1500px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
   };
 
   return (
     <div
-      className="hud-container"
       ref={containerRef}
+      className="hud-container"
+      style={tiltStyle}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: 'transform 0.1s ease-out' // Fast response for mouse follow
-      }}
     >
       {/* Header */}
       <div className="hud-header">
         <div className="hud-title-small">Galaxy Codex v3.0</div>
-        <div className="hud-category">{currentNode.category || 'System Data'}</div>
+        <div className="hud-category">{currentNode.category || 'Core AI'}</div>
       </div>
 
       {/* Body */}
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
-        {/* Content - handle both tabs format and legacy content format */}
-        {currentNode.tabs ? (
-          <>
-            <div className="hud-tabs">
-              {currentNode.tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`hud-tab ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="hud-content-scroll">
-              {activeTab === 'visuals' && currentTabContent?.diagram ? (
-                <MermaidRenderer chart={currentTabContent.diagram} />
-              ) : (
-                <div className="rich-content">
-                  {renderContent(currentTabContent?.content)}
-                  {currentTabContent?.streaming && (
-                    <span className="streaming-cursor">▌</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        ) : currentNode.content ? (
-          // Legacy format - just content string, no tabs
+        {currentNode.content ? (
           <div className="hud-content-scroll">
             <div className="rich-content">
-              {renderContent(currentNode.content)}
+              <ReactMarkdown components={markdownComponents}>
+                {currentNode.content}
+              </ReactMarkdown>
               {currentNode.streaming && (
                 <span className="streaming-cursor">▌</span>
               )}
