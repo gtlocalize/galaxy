@@ -13,32 +13,40 @@ const LearningHUD = () => {
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
+  // Reset tab when node changes
+  useEffect(() => {
+    setActiveTab('overview');
+  }, [activeNode]);
+
   // Initialize Mermaid
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: true,
       theme: 'dark',
       securityLevel: 'loose',
+      fontFamily: 'Inter'
     });
   }, []);
 
   // Render Mermaid diagrams when tab changes or content updates
   useEffect(() => {
+    // Only run if Visuals tab is active
     if (activeTab === 'visuals' && currentNode?.content && mermaidRef.current) {
       // Extract mermaid code blocks - lenient regex
       const match = currentNode.content.match(/```(mermaid|graph)([\s\S]*?)```/i);
       if (match && match[2]) {
-        // Clear previous content safely
+        // Clear previous content
         mermaidRef.current.innerHTML = '';
 
-        // Create a unique ID for the diagram
         const id = `mermaid-${Date.now()}`;
+        const graphDefinition = match[2].trim();
 
         try {
-            mermaid.render(id, match[2].trim())
+            mermaid.render(id, graphDefinition)
             .then(({ svg }) => {
-                if (mermaidRef.current) {
-                mermaidRef.current.innerHTML = svg;
+                // Double check we are still on the visuals tab and ref exists
+                if (activeTab === 'visuals' && mermaidRef.current) {
+                    mermaidRef.current.innerHTML = svg;
                 }
             });
         } catch (err) {
@@ -48,26 +56,24 @@ const LearningHUD = () => {
              }
         }
       } else {
-        // No mermaid code found
         mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
       }
+    } else {
+        // Cleanup if not visuals tab (just in case)
+        if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = '';
+        }
     }
   }, [activeTab, currentNode]);
 
-  // Interactive 3D tilt based on mouse position
+  // Interactive 3D tilt
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    
-    // Normalized coordinates (-0.5 to 0.5) relative to center of HUD
     const x = (e.clientX - rect.left) / rect.width - 0.5; 
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    
-    // Reversed tilt: Push away from cursor (Positive X -> Positive Y rotation)
     setTilt({ x: -y * 15, y: x * 15 }); 
   };
-
-  // REMOVED handleMouseLeave to persist tilt state
 
   if (!currentNode) return null;
 
@@ -75,7 +81,6 @@ const LearningHUD = () => {
   let overviewContent = currentNode.content || '';
   let deepDiveContent = '';
 
-  // Try to split by "## Deep Dive" or "## How It Works" or generic header if strict match fails
   const deepDiveMarkers = ['## Deep Dive', '## How It Works', '## Technical Details'];
   let splitIndex = -1;
   
@@ -89,23 +94,15 @@ const LearningHUD = () => {
 
   if (splitIndex !== -1) {
     overviewContent = currentNode.content.substring(0, splitIndex);
-    // Deep Dive contains everything after the marker
     deepDiveContent = currentNode.content.substring(splitIndex);
   } else {
-      // Fallback: If no Deep Dive header, everything is overview.
-      // But we check if there's a lot of content, maybe we can split?
-      // For now, just leave deepDiveContent empty or show a message.
       deepDiveContent = "### No detailed technical breakdown available for this summary.";
   }
 
-  // Helper to strip Visuals section and Mermaid blocks from text views
+  // Helper to strip Visuals section and Mermaid blocks
   const cleanText = (text) => {
       if (!text) return '';
-      // Remove the Visuals section entirely (header + content until end or next major section)
-      // Actually, regex is hard if we don't know next section. 
-      // Prompt puts Visuals near end.
       let cleaned = text.replace(/## (Visuals|Diagram|Architecture)[\s\S]*?$/, '');
-      // Also strip any remaining mermaid code blocks just in case
       cleaned = cleaned.replace(/```(mermaid|graph)[\s\S]*?```/gi, '');
       return cleaned;
   };
@@ -113,7 +110,6 @@ const LearningHUD = () => {
   overviewContent = cleanText(overviewContent);
   deepDiveContent = cleanText(deepDiveContent);
 
-  // Process [[wiki-links]] inline within text
   const processWikiLinks = (text) => {
     if (typeof text !== 'string') return text;
     const parts = text.split(/(\[\[.*?\]\])/g);
@@ -130,7 +126,6 @@ const LearningHUD = () => {
     });
   };
 
-  // Custom components for ReactMarkdown
   const markdownComponents = {
     p: ({ children }) => <p>{processChildren(children)}</p>,
     li: ({ children }) => <li>{processChildren(children)}</li>,
@@ -139,7 +134,7 @@ const LearningHUD = () => {
     code: ({ node, inline, className, children, ...props }) => {
       const match = /language-(\w+)/.exec(className || '');
       if (!inline && match && (match[1] === 'mermaid' || match[1] === 'graph')) {
-        return null; // Don't render raw mermaid code in text tabs
+        return null;
       }
       return <code className={className} {...props}>{children}</code>;
     }
@@ -162,7 +157,6 @@ const LearningHUD = () => {
       className="hud-container"
       style={tiltStyle}
       onMouseMove={handleMouseMove}
-      // No onMouseLeave
     >
       {/* Header */}
       <div className="hud-header">
@@ -199,12 +193,12 @@ const LearningHUD = () => {
         {currentNode.content || currentNode.streaming ? (
           <div className="hud-content-scroll">
             {activeTab === 'visuals' ? (
-              <div className="visuals-container" ref={mermaidRef}>
+              <div key="visuals" className="visuals-container" ref={mermaidRef}>
                 {/* Mermaid renders here */}
                 {currentNode.streaming && <div className="spinner"></div>}
               </div>
             ) : (
-              <div className="rich-content">
+              <div key="text" className="rich-content">
                 <ReactMarkdown components={markdownComponents}>
                   {activeTab === 'deepdive' ? deepDiveContent : overviewContent}
                 </ReactMarkdown>

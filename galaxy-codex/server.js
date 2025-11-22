@@ -84,12 +84,13 @@ Write a comprehensive educational article with this EXACT structure. Ensure ther
 [Include Real-World Applications here as well]
 
 ## Visuals
-Create a Mermaid diagram to visualize this concept. Use the syntax:
+Create a complex Mermaid diagram to visualize this concept. Use the syntax:
 \`\`\`mermaid
 graph TD
 ...
 \`\`\`
-Keep the diagram simple but informative.
+Try to make it detailed (e.g., a process flow, hierarchy, or decision tree).
+If appropriate, include a second diagram (e.g. a sequence diagram or mindmap) below the first one.
 
 ## Connections
 [How it relates to other fields - use [[wiki-links]]]

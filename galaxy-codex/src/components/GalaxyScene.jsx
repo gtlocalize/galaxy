@@ -326,9 +326,9 @@ const GalaxyScene = () => {
         onEngineStop={() => fgRef.current.zoomToFit(400)} // Optional: fit to view when done
 
         // Link Styling
-        linkColor={() => '#4444aa'}
-        linkOpacity={0.4} // More visible links
-        linkWidth={0.8}
+        linkColor={() => '#ffffff'}
+        linkOpacity={0.6} // More visible links
+        linkWidth={1.5}
         linkDirectionalParticles={3} // More particles
         linkDirectionalParticleWidth={2.5}
         linkDirectionalParticleSpeed={0.005}
