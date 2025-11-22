@@ -1,6 +1,7 @@
 import React from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
+import './HUD.css';
 
 const LearningHUD = () => {
   const { activeNode, graphData } = useStore();
@@ -9,64 +10,83 @@ const LearningHUD = () => {
 
   if (!currentNode) return null;
 
+  // Find connected children to display as "Sub Topics"
+  const children = graphData.links
+    .filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === activeNode)
+    .map(l => {
+        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+        return graphData.nodes.find(n => n.id === targetId);
+    })
+    .filter(Boolean)
+    .slice(0, 4); // Show max 4 in the grid
+
+  // Mock stats for the visual footer
+  const stats = [
+    { label: 'CONN', val: children.length + 1 }, // Connections
+    { label: 'REL', val: Math.floor(Math.random() * 100) + '%' }, // Relevance
+    { label: 'DEPTH', val: 'Lvl 1' }
+  ];
+
   return (
-    <div style={{
-      position: 'absolute',
-      top: '20px',
-      right: '20px',
-      width: '350px',
-      maxHeight: '80vh',
-      overflowY: 'auto',
-      backgroundColor: 'rgba(10, 10, 20, 0.7)', // Darker blue-ish tint
-      color: '#e0f0ff',
-      padding: '25px',
-      borderRadius: '12px',
-      border: '1px solid rgba(0, 255, 255, 0.3)', // Cyan subtle border
-      boxShadow: '0 0 20px rgba(0, 150, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5)', // Glow + Depth
-      fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.3s ease'
-    }}>
-      <h2 style={{ 
-        marginTop: 0, 
-        color: currentNode.color || '#00ffff',
-        textShadow: '0 0 10px rgba(0,255,255,0.5)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        paddingBottom: '10px',
-        fontSize: '1.5rem',
-        fontWeight: '300',
-        letterSpacing: '1px'
-      }}>
-        {currentNode.name.toUpperCase()}
-      </h2>
-      
-      <div style={{ fontSize: '0.95rem', lineHeight: '1.6', color: '#ccc' }}>
-        {currentNode.summary ? (
-          <ReactMarkdown>{currentNode.summary}</ReactMarkdown>
-        ) : (
-          <p style={{ fontStyle: 'italic', opacity: 0.7 }}>Accessing Neural Database...</p>
-        )}
+    <div className="hud-container">
+      {/* Header */}
+      <div className="hud-header">
+        <div className="hud-title-small">System Interface</div>
+        <div style={{ color: '#557799', fontSize: '12px' }}>v2.0.4</div>
       </div>
 
-      <div style={{ 
-        marginTop: '20px', 
-        paddingTop: '10px', 
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '0.7rem',
-        color: '#555'
-      }}>
-        <span style={{ fontFamily: 'monospace' }}>ID: {currentNode.id.substring(0, 8)}...</span>
-        <span style={{ 
-          display: 'inline-block', 
-          width: '8px', 
-          height: '8px', 
-          borderRadius: '50%', 
-          backgroundColor: '#00ff00', 
-          boxShadow: '0 0 5px #00ff00' 
-        }}></span>
+      {/* Body */}
+      <div className="hud-body">
+        <h1 className="hud-main-title">{currentNode.name}</h1>
+        
+        <div className="hud-description">
+          {currentNode.summary ? (
+             <ReactMarkdown>{currentNode.summary}</ReactMarkdown>
+          ) : (
+             <div style={{ fontStyle: 'italic', opacity: 0.7 }}>Accessing neural database...</div>
+          )}
+        </div>
+
+        {/* Sub Topics Grid */}
+        <div className="hud-section-label">Related Nodes</div>
+        <div className="hud-grid">
+            {children.length > 0 ? children.map(child => (
+                <div key={child.id} className="hud-chip">
+                    {child.name}
+                </div>
+            )) : (
+                <>
+                    <div className="hud-chip" style={{ opacity: 0.5 }}>Scanning...</div>
+                    <div className="hud-chip" style={{ opacity: 0.3 }}>-</div>
+                </>
+            )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="hud-footer">
+        <div className="visual-graph">
+            {[40, 70, 30, 80, 50, 90, 20].map((h, i) => (
+                <div 
+                    key={i} 
+                    className="graph-bar" 
+                    style={{ 
+                        height: `${h}%`, 
+                        animationDelay: `${i * 0.1}s`,
+                        backgroundColor: currentNode.color || '#00ffff' 
+                    }} 
+                />
+            ))}
+        </div>
+        
+        <div style={{ display: 'flex', gap: '15px', fontSize: '0.7rem', color: '#557799', fontFamily: 'monospace' }}>
+            {stats.map(s => (
+                <div key={s.label}>
+                    <div style={{ marginBottom: '2px' }}>{s.label}</div>
+                    <div style={{ color: '#aaddff' }}>{s.val}</div>
+                </div>
+            ))}
+        </div>
       </div>
     </div>
   );
