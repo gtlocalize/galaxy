@@ -1,42 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
+import MermaidRenderer from './MermaidRenderer';
 import './HUD.css';
 
 const LearningHUD = () => {
   const { activeNode, graphData, handleLinkClick } = useStore();
+  const [activeTab, setActiveTab] = useState('overview');
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
+  // Reset tab when node changes
+  useEffect(() => {
+    setActiveTab('overview');
+  }, [activeNode]);
+
   if (!currentNode) return null;
 
-  // Custom renderer - split content by [[wiki-links]] and render them as buttons
+  const currentTabContent = currentNode.tabs?.find(t => t.id === activeTab);
+
+  // Custom renderer for [[wiki-links]]
   const renderContent = (content) => {
     if (!content) return null;
 
-    // Split by [[wiki-links]] keeping the delimiters
-    const parts = content.split(/(\[\[.*?\]\])/g);
+    // Pre-process: Convert [[link]] to [link](wiki:link)
+    const processed = content.replace(/\[\[(.*?)\]\]/g, '[$1](wiki:$1)');
 
-    return parts.map((part, index) => {
-      // Check if this is a wiki link
-      const match = part.match(/^\[\[(.*?)\]\]$/);
-      if (match) {
-        const term = match[1];
-        return (
-          <button
-            key={index}
-            type="button"
-            className="wiki-link"
-            onClick={() => handleLinkClick(term, currentNode.id)}
-          >
-            {term}
-          </button>
-        );
-      }
-      // Regular markdown - render without wiki links
-      if (!part.trim()) return null;
-      return <ReactMarkdown key={index}>{part}</ReactMarkdown>;
-    });
+    return (
+      <ReactMarkdown
+        components={{
+          a: ({ href, children }) => {
+            if (href && href.startsWith('wiki:')) {
+              const term = href.replace('wiki:', '');
+              return (
+                <span
+                  className="wiki-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent bubbling
+                    handleLinkClick(term, currentNode.id);
+                  }}
+                >
+                  {children}
+                </span>
+              );
+            }
+            return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+          }
+        }}
+      >
+        {processed}
+      </ReactMarkdown>
+    );
   };
 
   return (
@@ -51,8 +66,36 @@ const LearningHUD = () => {
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
-        {/* Content */}
-        {currentNode.content ? (
+        {/* Content - handle both tabs format and legacy content format */}
+        {currentNode.tabs ? (
+          <>
+            <div className="hud-tabs">
+              {currentNode.tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`hud-tab ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="hud-content-scroll">
+              {activeTab === 'visuals' && currentTabContent?.diagram ? (
+                <MermaidRenderer chart={currentTabContent.diagram} />
+              ) : (
+                <div className="rich-content">
+                  {renderContent(currentTabContent?.content)}
+                  {currentTabContent?.streaming && (
+                    <span className="streaming-cursor">▌</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : currentNode.content ? (
+          // Legacy format - just content string, no tabs
           <div className="hud-content-scroll">
             <div className="rich-content">
               {renderContent(currentNode.content)}
