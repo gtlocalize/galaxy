@@ -5,7 +5,13 @@ const useStore = create((set, get) => ({
   activeNode: 'ai_root',
   graphData: {
     nodes: [
-      { id: 'ai_root', name: 'Artificial Intelligence', val: 80, color: '#00ffff' }
+      { 
+        id: 'ai_root', 
+        name: 'Artificial Intelligence', 
+        val: 80, 
+        color: '#00ffff',
+        summary: 'The simulation of human intelligence processes by computer systems.'
+      }
     ],
     links: []
   },

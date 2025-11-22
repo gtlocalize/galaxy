@@ -12,7 +12,7 @@ const CameraController = ({ focusNode }) => {
   const vec = new THREE.Vector3();
 
   useFrame((state, delta) => {
-    if (focusNode) {
+    if (focusNode && focusNode.x) {
       // Calculate target position (offset from node)
       const distance = 40;
       const distRatio = 1 + distance / Math.hypot(focusNode.x, focusNode.y, focusNode.z);
@@ -40,9 +40,8 @@ const CameraController = ({ focusNode }) => {
 const GraphContent = () => {
   const { graphData, expandNode, setActiveNode } = useStore();
   const [focusNode, setFocusNode] = useState(null);
-  
-  // References for instances to update positions without React reconciler overhead
-  const groupRef = useRef();
+  const [renderNodes, setRenderNodes] = useState([]);
+  const [renderLinks, setRenderLinks] = useState([]);
   
   // Simulation State
   const simulation = useMemo(() => {
@@ -63,60 +62,27 @@ const GraphContent = () => {
     simulation.force('link').links(links);
     simulation.alpha(1).restart();
 
-    // Cleanup not really possible for the sim instance itself, but we restart it.
+    setRenderNodes(nodes);
+    setRenderLinks(links);
   }, [graphData, simulation]);
 
   // Animation Loop
   useFrame(() => {
     simulation.tick(); // Tick physics
-    
-    // Update React/Three objects
-    // This is a naive React approach (re-rendering). 
-    // For 1000+ nodes we'd use instancedMesh and direct buffer updates.
-    // But for < 100 nodes, mapping Components is fine and easier to read.
-    
-    // However, to make simulation smooth, we force update? 
-    // Actually, standard React state update is too slow for 60fps physics.
-    // We use a ref and imperative updates.
-    if (groupRef.current) {
-        // The children are updated automatically if we map them to the simulation nodes?
-        // No, we need to bridge the d3 node x/y/z to the THREE object position.
-        
-        // Hack: We trigger a re-render or update refs?
-        // Better: We map the nodes once, and in useFrame we iterate the children.
-        // But the nodes list changes.
-        
-        // Simplest robust path for "Gemini Code": 
-        // Just let React handle the structure, useFrame for positions.
-    }
   });
-
-  // We will use a "forceUpdate" hack or just use the fact that 
-  // we can access the simulation nodes directly in the render loop
-  // BUT reacting to graphData changes is key.
-  
-  // Let's try a different approach: 
-  // The `nodes` array in the simulation matches `graphData.nodes` (cloned).
-  // We need to render based on `simulation.nodes()`.
-  // Since simulation mutates x,y,z in place, we can just read them.
-  // We need to trigger a re-render of the scene to move things? No, that's slow.
-  // We use refs.
-
-  const nodes = simulation.nodes();
-  const links = simulation.force('link').links();
 
   return (
     <>
       <CameraController focusNode={focusNode} />
       
-      <group ref={groupRef}>
+      <group>
         {/* Links */}
-        {links.map((link, i) => (
+        {renderLinks.map((link) => (
             <GraphLink key={`${link.source.id}-${link.target.id}`} link={link} />
         ))}
 
         {/* Nodes */}
-        {nodes.map((node) => (
+        {renderNodes.map((node) => (
           <GraphNode 
             key={node.id} 
             node={node} 
@@ -124,7 +90,6 @@ const GraphContent = () => {
                 setFocusNode(node);
                 setActiveNode(node.id);
                 await expandNode(node.id);
-                // Re-heat sim
                 simulation.alpha(1).restart();
             }} 
           />
@@ -134,12 +99,12 @@ const GraphContent = () => {
   );
 };
 
-// Individual Node Component (moved out for per-frame optimization potential)
+// Individual Node Component
 const GraphNode = ({ node, onNodeClick }) => {
   const ref = useRef();
   
   useFrame(() => {
-    if (ref.current && node.x) {
+    if (ref.current && node.x !== undefined) {
       ref.current.position.set(node.x, node.y, node.z);
     }
   });
@@ -184,7 +149,7 @@ const GraphLink = ({ link }) => {
   const ref = useRef();
   
   useFrame(() => {
-    if (ref.current && link.source.x && link.target.x) {
+    if (ref.current && link.source && link.target && link.source.x !== undefined && link.target.x !== undefined) {
       const start = new THREE.Vector3(link.source.x, link.source.y, link.source.z);
       const end = new THREE.Vector3(link.target.x, link.target.y, link.target.z);
       
@@ -200,7 +165,7 @@ const GraphLink = ({ link }) => {
   return (
     <mesh ref={ref}>
       {/* Box geometry with length 1 on Z axis implies we just scale Z */}
-      <boxGeometry args={[0.5, 0.5, 1]} />
+      <boxGeometry args={[0.1, 0.1, 1]} />
       <meshBasicMaterial color="#4444aa" transparent opacity={0.3} toneMapped={false} />
     </mesh>
   );
