@@ -9,60 +9,61 @@ const LearningHUD = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
-  const mermaidRef = useRef(null);
+  const [mermaidSvg, setMermaidSvg] = useState(''); // State for SVG string to avoid DOM conflicts
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
   // Reset tab when node changes
   useEffect(() => {
     setActiveTab('overview');
+    setMermaidSvg(''); // Clear diagram
   }, [activeNode]);
 
   // Initialize Mermaid
   useEffect(() => {
     mermaid.initialize({
-      startOnLoad: true,
+      startOnLoad: false, // We render manually
       theme: 'dark',
       securityLevel: 'loose',
-      fontFamily: 'Inter'
+      fontFamily: 'Inter',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        primaryColor: '#00ffff',
+        edgeLabelBackground: '#000000',
+        tertiaryColor: '#111111'
+      }
     });
   }, []);
 
   // Render Mermaid diagrams when tab changes or content updates
   useEffect(() => {
-    // Only run if Visuals tab is active
-    if (activeTab === 'visuals' && currentNode?.content && mermaidRef.current) {
-      // Extract mermaid code blocks - lenient regex
+    // Only run if Visuals tab is active and we have content
+    if (activeTab === 'visuals' && currentNode?.content) {
+      // Extract mermaid code blocks
       const match = currentNode.content.match(/```(mermaid|graph)([\s\S]*?)```/i);
+      
       if (match && match[2]) {
-        // Clear previous content
-        mermaidRef.current.innerHTML = '';
-
         const id = `mermaid-${Date.now()}`;
         const graphDefinition = match[2].trim();
 
         try {
             mermaid.render(id, graphDefinition)
             .then(({ svg }) => {
-                // Double check we are still on the visuals tab and ref exists
-                if (activeTab === 'visuals' && mermaidRef.current) {
-                    mermaidRef.current.innerHTML = svg;
-                }
+                // React State update is safe
+                setMermaidSvg(svg);
+            })
+            .catch(err => {
+                 console.error('Mermaid render error:', err);
+                 setMermaidSvg('<p class="error-msg">Failed to render visualization syntax.</p>');
             });
         } catch (err) {
-             console.error('Mermaid render error:', err);
-             if (mermaidRef.current) {
-               mermaidRef.current.innerHTML = '<p class="error-msg">Failed to render visualization.</p>';
-             }
+             console.error('Mermaid sync error:', err);
+             setMermaidSvg('<p class="error-msg">Failed to parse visualization.</p>');
         }
       } else {
-        mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
+        setMermaidSvg('<p class="no-visuals">No visualization available for this topic.</p>');
       }
-    } else {
-        // Cleanup if not visuals tab (just in case)
-        if (mermaidRef.current) {
-            mermaidRef.current.innerHTML = '';
-        }
     }
   }, [activeTab, currentNode]);
 
@@ -193,9 +194,15 @@ const LearningHUD = () => {
         {currentNode.content || currentNode.streaming ? (
           <div className="hud-content-scroll">
             {activeTab === 'visuals' ? (
-              <div key="visuals" className="visuals-container" ref={mermaidRef}>
-                {/* Mermaid renders here */}
-                {currentNode.streaming && <div className="spinner"></div>}
+              <div className="visuals-container">
+                {mermaidSvg ? (
+                    <div 
+                        className="mermaid-wrapper"
+                        dangerouslySetInnerHTML={{ __html: mermaidSvg }} 
+                    />
+                ) : (
+                    currentNode.streaming ? <div className="spinner"></div> : <p className="no-visuals">Generating diagram...</p>
+                )}
               </div>
             ) : (
               <div key="text" className="rich-content">

@@ -1,320 +1,54 @@
-/* Minority Report / Sci-Fi HUD Style */
-.hud-container {
-  position: absolute;
-  top: 40px;
-  right: 40px;
-  width: 720px;
-  /* Wider as requested */
-  height: 85vh;
-  display: flex;
-  flex-direction: column;
-
-  /* Glassmorphism & Holographic Effect */
-  background: rgba(10, 20, 30, 0.6);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-
-  /* Glowing Border */
-  border: 1px solid rgba(100, 200, 255, 0.3);
-  border-radius: 16px;
-  box-shadow:
-    0 0 30px rgba(0, 100, 255, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-
-  /* Typography */
-  font-family: 'Inter', 'Roboto', sans-serif;
-  color: #e0f0ff;
-
-  /* 3D Transform */
-  transform-style: preserve-3d;
-  /* transform is handled by JS */
-  transition: box-shadow 0.4s ease;
-  z-index: 100;
-}
-
-.hud-container:hover {
-  /* Let JS handle tilt - just enhance glow */
-  box-shadow:
-    0 0 50px rgba(0, 100, 255, 0.2),
-    0 0 0 1px rgba(100, 200, 255, 0.4) inset;
-  background: rgba(10, 20, 30, 0.75);
-}
-
-/* Header */
-.hud-header {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 30px;
-  background: linear-gradient(90deg, rgba(0, 200, 255, 0.1) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(100, 200, 255, 0.2);
-}
-
-.hud-title-small {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  font-weight: 700;
-  color: #00ffff;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hud-title-small::before {
-  content: '';
-  display: block;
-  width: 8px;
-  height: 8px;
-  background: #00ffff;
-  border-radius: 50%;
-  box-shadow: 0 0 10px #00ffff;
-}
-
-.hud-category {
-  font-size: 0.7rem;
-  color: #557799;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border: 1px solid rgba(85, 119, 153, 0.3);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-/* Body */
-.hud-body {
-  flex: 1 1 auto;
-  padding: 30px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.hud-main-title {
-  flex: 0 0 auto;
-  margin: 0 0 25px 0;
-  font-size: 2.5rem;
-  font-weight: 200;
-  letter-spacing: -1px;
-  background: linear-gradient(90deg, #ffffff, #88ccff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 20px rgba(0, 200, 255, 0.3));
-}
-
-/* Tabs - Sci-Fi Buttons */
-.hud-tabs {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 25px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.hud-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: #8899aa;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  padding: 10px 15px;
-  transition: all 0.3s ease;
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-}
-
-.hud-tab:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.hud-tab.active {
-  color: #000;
-  background: #00ffff;
-  font-weight: 700;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-}
-
-/* Content Scroll Area */
-.hud-content-scroll {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-right: 10px;
-  /* Custom Scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 255, 255, 0.3) transparent;
-}
-
-.hud-content-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.hud-content-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.hud-content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-/* Rich Content Typography */
-.rich-content h2 {
-  font-size: 1.5rem;
-  color: #aaddff;
-  margin-top: 30px;
-  margin-bottom: 15px;
-  border-left: 4px solid #00ffff;
-  padding-left: 15px;
-  background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
-}
-
-.rich-content h3 {
-  font-size: 1.2rem;
-  color: #00ffff;
-  margin-top: 25px;
-  margin-bottom: 12px;
-  font-weight: 600;
-}
-
-.rich-content p {
-  margin-bottom: 18px;
-  line-height: 1.8;
-  color: #cceeff;
-  font-size: 1.05rem;
-}
-
-.rich-content ul {
-  margin-bottom: 20px;
-  padding-left: 20px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rich-content li {
-  margin-bottom: 10px;
-  color: #ddeeff;
-  padding-left: 10px;
-}
-
-/* Wiki Links - Holographic Buttons */
-.wiki-link {
-  color: #00ffff;
-  cursor: pointer;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-  transition: all 0.2s;
-  padding: 0 2px;
-  background: rgba(0, 255, 255, 0.05);
-  border-radius: 2px;
-}
-
-.wiki-link:hover {
-  background: rgba(0, 255, 255, 0.2);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-  border-bottom-color: #00ffff;
-}
-
-/* Mermaid Diagram */
-.mermaid-container {
-  margin-top: 20px;
+/* Mermaid Wrapper */
+.mermaid-wrapper {
+  width: 100%;
   display: flex;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
   padding: 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 10px;
 }
 
-/* Loading Spinner - Sci-Fi Ring */
-.hud-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #557799;
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+  background-color: transparent !important; /* Force transparency */
 }
 
-.spinner {
-  width: 60px;
-  height: 60px;
-  border: 2px solid transparent;
-  border-top-color: #00ffff;
-  border-bottom-color: #00ffff;
-  border-radius: 50%;
-  animation: spin 1.5s linear infinite;
-  margin-bottom: 20px;
-  position: relative;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+/* Ensure text in SVG is visible */
+.mermaid-wrapper svg text {
+  fill: #e0f0ff !important;
+  font-family: 'Inter', sans-serif !important;
 }
 
-.spinner::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  border: 2px solid transparent;
-  border-left-color: #0088ff;
-  border-right-color: #0088ff;
-  border-radius: 50%;
-  animation: spin 2s linear infinite reverse;
+.mermaid-wrapper svg .node rect,
+.mermaid-wrapper svg .node circle,
+.mermaid-wrapper svg .node polygon {
+  fill: rgba(0, 50, 100, 0.5) !important;
+  stroke: #00ffff !important;
+  stroke-width: 1.5px !important;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.mermaid-wrapper svg .edgePath .path {
+  stroke: #557799 !important;
+  stroke-width: 1.5px !important;
 }
 
-/* Footer */
-.hud-footer {
-  flex: 0 0 auto;
-  padding: 15px 30px;
-  background: rgba(0, 0, 0, 0.4);
-  border-top: 1px solid rgba(100, 200, 255, 0.2);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.mermaid-wrapper svg .edgeLabel {
+  background-color: #000 !important;
+  color: #aaddff !important;
 }
 
-.visual-graph {
-  display: flex;
-  gap: 4px;
-  align-items: flex-end;
-  height: 20px;
+.error-msg {
+    color: #ff5555;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
 }
 
-.graph-bar {
-  width: 4px;
-  background: #00ffff;
-  border-radius: 2px;
-  opacity: 0.6;
-  box-shadow: 0 0 5px #00ffff;
-  animation: barPulse 1.5s infinite ease-in-out;
-}
-
-@keyframes barPulse {
-
-  0%,
-  100% {
-    opacity: 0.4;
-    height: 30%;
-  }
-
-  50% {
-    opacity: 1;
-    height: 100%;
-  }
+.no-visuals {
+    color: #557799;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
 }
