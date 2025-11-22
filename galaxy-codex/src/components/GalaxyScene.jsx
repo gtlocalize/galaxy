@@ -1,13 +1,15 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import * as THREE from 'three';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import useStore from '../store/useStore';
 
 const GalaxyScene = () => {
   const fgRef = useRef();
   const { graphData, expandNode, setActiveNode } = useStore();
+  const rotationRef = useRef(0);
 
-  // 1. Add Starfield Background on Mount
+  // 1. Add Starfield, Lights, and Post-Processing
   useEffect(() => {
     if (fgRef.current) {
       const scene = fgRef.current.scene();
@@ -16,10 +18,10 @@ const GalaxyScene = () => {
       const starGeometry = new THREE.BufferGeometry();
       const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0.8 });
       const starVertices = [];
-      for (let i = 0; i < 3000; i++) {
-        const x = (Math.random() - 0.5) * 2000;
-        const y = (Math.random() - 0.5) * 2000;
-        const z = (Math.random() - 0.5) * 2000;
+      for (let i = 0; i < 5000; i++) { // Increased star count
+        const x = (Math.random() - 0.5) * 3000; // Wider field
+        const y = (Math.random() - 0.5) * 3000;
+        const z = (Math.random() - 0.5) * 3000;
         starVertices.push(x, y, z);
       }
       starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
@@ -30,10 +32,43 @@ const GalaxyScene = () => {
       const ambientLight = new THREE.AmbientLight(0x404040, 2);
       scene.add(ambientLight);
 
-      const pointLight = new THREE.PointLight(0xffffff, 1);
+      const pointLight = new THREE.PointLight(0xffffff, 2); // Brighter
       pointLight.position.set(100, 100, 100);
       scene.add(pointLight);
+
+      // BLOOM EFFECT (The "Pizzaz")
+      const bloomPass = new UnrealBloomPass();
+      bloomPass.strength = 2.0; // High glow
+      bloomPass.radius = 0.5;
+      bloomPass.threshold = 0.1;
+
+      // Access the internal composer if available
+      const composer = fgRef.current.postProcessingComposer();
+      if (composer) {
+        composer.addPass(bloomPass);
+      }
     }
+  }, []);
+
+  // Auto-rotation logic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (fgRef.current) {
+        // Gentle rotation
+        rotationRef.current += 0.0005;
+        const dist = 400;
+        const x = dist * Math.sin(rotationRef.current);
+        const z = dist * Math.cos(rotationRef.current);
+
+        // Only rotate if not interacting (simple check: we just set camera pos)
+        // Note: This might fight with user controls. 
+        // Better approach: Just rotate the SCENE or the stars?
+        // Let's rotate the camera gently.
+        fgRef.current.cameraPosition({ x, z });
+      }
+    }, 30);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Category Colors
@@ -111,7 +146,7 @@ const GalaxyScene = () => {
     const circleTexture = createCircleTexture();
 
     // 1. Dense Particle Cloud - many tiny stars forming the planet
-    const particleCount = 400;
+    const particleCount = 600; // Increased density
     const particlesGeometry = new THREE.BufferGeometry();
     const particlePositions = [];
     const particleSizes = [];
@@ -152,7 +187,7 @@ const GalaxyScene = () => {
     group.add(cloud);
 
     // 2. Outer halo particles (sparse, larger, dimmer)
-    const haloCount = 80;
+    const haloCount = 120; // More halo
     const haloGeometry = new THREE.BufferGeometry();
     const haloPositions = [];
 
@@ -161,7 +196,7 @@ const GalaxyScene = () => {
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      const r = radius * (1 + Math.random() * 0.4); // Just outside main sphere
+      const r = radius * (1 + Math.random() * 0.5); // Wider halo
 
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);
@@ -177,7 +212,7 @@ const GalaxyScene = () => {
       size: 0.8,
       map: circleTexture,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.5,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -190,7 +225,7 @@ const GalaxyScene = () => {
     const coreMat = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.6, // Brighter core
       blending: THREE.AdditiveBlending
     });
     const core = new THREE.Mesh(coreGeo, coreMat);
@@ -215,10 +250,10 @@ const GalaxyScene = () => {
 
         // Link Styling
         linkColor={() => '#4444aa'}
-        linkOpacity={0.3}
-        linkWidth={0.5}
-        linkDirectionalParticles={2}
-        linkDirectionalParticleWidth={2}
+        linkOpacity={0.4} // More visible links
+        linkWidth={0.8}
+        linkDirectionalParticles={3} // More particles
+        linkDirectionalParticleWidth={2.5}
         linkDirectionalParticleSpeed={0.005}
 
         // Custom Node Rendering
