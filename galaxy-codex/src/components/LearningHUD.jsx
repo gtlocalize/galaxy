@@ -25,27 +25,28 @@ const LearningHUD = () => {
   // Render Mermaid diagrams when tab changes or content updates
   useEffect(() => {
     if (activeTab === 'visuals' && currentNode?.content && mermaidRef.current) {
-      // Extract mermaid code blocks
-      const match = currentNode.content.match(/```mermaid([\s\S]*?)```/);
-      if (match && match[1]) {
+      // Extract mermaid code blocks - lenient regex
+      const match = currentNode.content.match(/```(mermaid|graph)([\s\S]*?)```/i);
+      if (match && match[2]) {
         // Clear previous content safely
         mermaidRef.current.innerHTML = '';
 
         // Create a unique ID for the diagram
         const id = `mermaid-${Date.now()}`;
 
-        mermaid.render(id, match[1])
-          .then(({ svg }) => {
-            if (mermaidRef.current) {
-              mermaidRef.current.innerHTML = svg;
-            }
-          })
-          .catch(err => {
-            console.error('Mermaid render error:', err);
-            if (mermaidRef.current) {
-              mermaidRef.current.innerHTML = '<p class="error-msg">Failed to render visualization.</p>';
-            }
-          });
+        try {
+            mermaid.render(id, match[2].trim())
+            .then(({ svg }) => {
+                if (mermaidRef.current) {
+                mermaidRef.current.innerHTML = svg;
+                }
+            });
+        } catch (err) {
+             console.error('Mermaid render error:', err);
+             if (mermaidRef.current) {
+               mermaidRef.current.innerHTML = '<p class="error-msg">Failed to render visualization.</p>';
+             }
+        }
       } else {
         // No mermaid code found
         mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
@@ -57,9 +58,17 @@ const LearningHUD = () => {
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+    
+    // Normalized coordinates (-0.5 to 0.5) relative to center of HUD
+    const x = (e.clientX - rect.left) / rect.width - 0.5; 
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * 12, y: -x * 12 }); // Degrees of tilt
+    
+    // FLIPPED LOGIC for "Push Away" effect
+    // If cursor is on Right (positive x), we want right side to go BACK (negative rotation Y? No, positive rotation Y)
+    // Actually, standard CSS: rotateY(10deg) pushes right side away (back).
+    // So positive X cursor -> Positive Y rotation.
+    
+    setTilt({ x: -y * 15, y: x * 15 }); 
   };
 
   const handleMouseLeave = () => {
@@ -67,6 +76,40 @@ const LearningHUD = () => {
   };
 
   if (!currentNode) return null;
+
+  // Robust Content Splitting
+  let overviewContent = currentNode.content || '';
+  let deepDiveContent = '';
+
+  // Try to split by "## Deep Dive" or "## How It Works" or generic header if strict match fails
+  const deepDiveMarkers = ['## Deep Dive', '## How It Works', '## Technical Details'];
+  let splitIndex = -1;
+  
+  for (const marker of deepDiveMarkers) {
+      const idx = currentNode.content?.indexOf(marker);
+      if (idx !== -1) {
+          splitIndex = idx;
+          break;
+      }
+  }
+
+  if (splitIndex !== -1) {
+    overviewContent = currentNode.content.substring(0, splitIndex);
+    // Deep Dive contains everything after the marker, excluding Visuals section if present
+    let rest = currentNode.content.substring(splitIndex);
+    
+    // Strip Visuals section from text views
+    const visualMarker = rest.match(/## (Visuals|Diagram|Architecture)/);
+    if (visualMarker) {
+        deepDiveContent = rest.substring(0, visualMarker.index);
+    } else {
+        deepDiveContent = rest;
+    }
+  } else {
+      // Fallback: If no Deep Dive header, just show everything in Overview
+      // But we can try to split by character count if it's huge? No, better to just show all.
+      deepDiveContent = "### No detailed technical breakdown available for this summary.";
+  }
 
   // Process [[wiki-links]] inline within text
   const processWikiLinks = (text) => {
@@ -93,8 +136,8 @@ const LearningHUD = () => {
     em: ({ children }) => <em>{processChildren(children)}</em>,
     code: ({ node, inline, className, children, ...props }) => {
       const match = /language-(\w+)/.exec(className || '');
-      if (!inline && match && match[1] === 'mermaid') {
-        return null; // Don't render raw mermaid code, handled by effect
+      if (!inline && match && (match[1] === 'mermaid' || match[1] === 'graph')) {
+        return null; // Don't render raw mermaid code in text tabs
       }
       return <code className={className} {...props}>{children}</code>;
     }
@@ -161,7 +204,7 @@ const LearningHUD = () => {
             ) : (
               <div className="rich-content">
                 <ReactMarkdown components={markdownComponents}>
-                  {currentNode.content || ''}
+                  {activeTab === 'deepdive' ? deepDiveContent : overviewContent}
                 </ReactMarkdown>
                 {currentNode.streaming && (
                   <span className="streaming-cursor">▌</span>

@@ -69,28 +69,36 @@ app.get('/galaxy-api/expand-stream', async (req, res) => {
 
     const prompt = `You are an expert tutor creating educational content about "${topic}".
 
-Write a comprehensive educational article (600-1000 words) with this structure:
+Write a comprehensive educational article with this EXACT structure. Do not deviate from the headers.
 
 # ${topic}
 
-[Opening paragraph: What it is and why it matters]
+## Overview
+[Brief high-level summary: What it is and why it matters. Keep it under 150 words.]
 
 ## Key Concepts
-[Core ideas explained clearly with [[wiki-links]] to related topics]
+[3-5 core ideas explained clearly with [[wiki-links]] to related topics]
 
-## How It Works
-[Detailed explanation of mechanics/process]
+## Deep Dive
+[Detailed technical explanation of mechanics, algorithms, or processes. Go into depth here.]
+[Include Real-World Applications here as well]
 
-## Real-World Applications
-[Practical uses and examples]
+## Visuals
+Create a Mermaid diagram to visualize this concept. Use the syntax:
+\`\`\`mermaid
+graph TD
+...
+\`\`\`
+Keep the diagram simple but informative.
 
 ## Connections
 [How it relates to other fields - use [[wiki-links]]]
 
 IMPORTANT:
 - Wrap 6-10 key related terms in [[double brackets]] like [[Neural Networks]]
-- Be thorough and educational, not surface-level
-- Use markdown formatting`;
+- Use markdown formatting
+- Ensure the Mermaid diagram is valid syntax
+- STRICTLY use the headers provided above so the UI can split the content correctly.`;
 
     const result = await model.generateContentStream(prompt);
     let fullText = '';
@@ -121,70 +129,6 @@ IMPORTANT:
     console.error('Gemini API Error:', error);
     res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
     res.end();
-  }
-});
-
-// Non-streaming fallback
-app.get('/galaxy-api/expand', async (req, res) => {
-  const { topic } = req.query;
-
-  if (!topic) {
-    return res.status(400).json({ error: 'Topic is required' });
-  }
-
-  // Check cache
-  if (cache[topic]) {
-    console.log(`Returning cached result for: ${topic}`);
-    return res.json(cache[topic]);
-  }
-
-  try {
-    console.log(`Generating content for: ${topic}`);
-
-    const prompt = `You are an expert tutor creating educational content about "${topic}".
-
-Write a comprehensive educational article (600-1000 words) with this structure:
-
-# ${topic}
-
-[Opening paragraph: What it is and why it matters]
-
-## Key Concepts
-[Core ideas explained clearly with [[wiki-links]] to related topics]
-
-## How It Works
-[Detailed explanation of mechanics/process]
-
-## Real-World Applications
-[Practical uses and examples]
-
-## Connections
-[How it relates to other fields - use [[wiki-links]]]
-
-IMPORTANT:
-- Wrap 6-10 key related terms in [[double brackets]] like [[Neural Networks]]
-- Be thorough and educational, not surface-level
-- Use markdown formatting`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    const data = {
-      name: topic,
-      category: 'Core AI',
-      content: text
-    };
-
-    // Update cache
-    cache[topic] = data;
-    await saveCache();
-
-    res.json(data);
-
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    res.status(500).json({ error: 'Failed to generate content', details: error.message });
   }
 });
 

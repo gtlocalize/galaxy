@@ -1,29 +1,41 @@
 import { create } from 'zustand';
 
-// Mock generator - Gemini 3 will replace this later
-const generateSubTopics = (topicId) => {
-  const topics = [
-    "Neural Architecture", "Loss Functions", "Optimization", 
-    "Data Pipelines", "Inference", "Hardware Acceleration"
-  ];
-  return topics.map((t, i) => ({
-    id: `${topicId}_${i}`,
-    name: t,
-    val: 10, 
-    color: "#00ccff", 
-    parent: topicId,
-    desc: `Deep dive into ${t}. Understanding this component is crucial for mastering the parent concept.`
-  }));
-};
-
 export const useStore = create((set, get) => ({
   graphData: {
     nodes: [{ 
       id: "root", 
       name: "Artificial Intelligence", 
-      val: 40, 
+      val: 60, // Bigger root
       color: "#ff0055", 
-      desc: "The simulation of human intelligence processes by machines."
+      type: "core", // Mark as core to add rings
+      modules: [
+        {
+          type: 'summary',
+          title: 'Summary',
+          content: 'Artificial Intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems. Specific applications include expert systems, NLP, and machine vision.'
+        },
+        {
+          type: 'grid',
+          title: 'Sub Topic',
+          items: [
+            { id: 'nn', label: 'Neural Networks' },
+            { id: 'ml', label: 'Machine Learning' },
+            { id: 'nlp', label: 'NLP' },
+            { id: 'cv', label: 'Computer Vision' },
+            { id: 'robotics', label: 'Robotics' },
+            { id: 'genai', label: 'Generative AI' }
+          ]
+        },
+        {
+          type: 'chart',
+          title: 'Pros/Cons', // The bar chart from your image
+          data: [
+            { label: 'Cost', val: 80, color: '#ef4444' },
+            { label: 'Speed', val: 40, color: '#3b82f6' },
+            { label: 'Acc', val: 90, color: '#10b981' }
+          ]
+        }
+      ]
     }],
     links: []
   },
@@ -32,17 +44,23 @@ export const useStore = create((set, get) => ({
 
   expandNode: (node) => {
     const { graphData } = get();
-    
-    // Prevent duplicate expansion
-    const isExpanded = graphData.links.some(l => l.source.id === node.id || l.source === node.id);
-    if (isExpanded) return;
+    if (graphData.links.some(l => l.source.id === node.id || l.source === node.id)) return;
 
-    // Generate children
-    const newNodes = generateSubTopics(node.id);
-    const newLinks = newNodes.map(child => ({
-      source: node.id,
-      target: child.id
+    // Spawn blue children
+    const subTopics = ["Neural Networks", "Machine Learning", "Deep Learning", "Robotics"];
+    const newNodes = subTopics.map((t, i) => ({
+      id: `${node.id}_${i}`,
+      name: t,
+      val: 20,
+      color: "#00ccff", // Neon Blue
+      type: "satellite",
+      parent: node.id,
+      modules: [
+        { type: 'summary', title: t, content: `Deep dive into ${t}.` }
+      ]
     }));
+
+    const newLinks = newNodes.map(child => ({ source: node.id, target: child.id }));
 
     set({
       graphData: {
