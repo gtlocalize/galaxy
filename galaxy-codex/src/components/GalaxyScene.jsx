@@ -39,17 +39,30 @@ const GalaxyScene = () => {
   const handleClick = useCallback(async (node) => {
     if (!fgRef.current) return;
 
-    // FIX: Capture coordinates immediately so we don't track a stale object reference
-    // if the graph re-generates the node object during expansion.
+    // Capture coords immediately
     const { x, y, z, id } = node;
 
-    // Fly camera to these static coordinates
+    console.log('Clicking node at:', x, y, z);
+
+    // Fly camera logic
     const distance = 60;
     const distRatio = 1 + distance/Math.hypot(x, y, z);
 
+    // Handle origin case (0,0,0) to prevent Infinity/NaN
+    let targetX = 0, targetY = 0, targetZ = 0;
+    if (!x && !y && !z) { // If all are 0 or undefined
+        targetX = 0;
+        targetY = 0;
+        targetZ = distance; // Just back up on Z
+    } else {
+        targetX = x * distRatio;
+        targetY = y * distRatio;
+        targetZ = z * distRatio;
+    }
+
     fgRef.current.cameraPosition(
-      { x: x * distRatio, y: y * distRatio, z: z * distRatio }, // Target pos
-      { x, y, z }, // Look at (static coords)
+      { x: targetX, y: targetY, z: targetZ }, // Target pos
+      { x: x || 0, y: y || 0, z: z || 0 }, // Look at
       2000  // Transition time
     );
 
