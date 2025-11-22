@@ -1,14 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
 import './HUD.css';
 
 const LearningHUD = () => {
   const { activeNode, graphData, handleLinkClick } = useStore();
+  const [activeTab, setActiveTab] = useState('overview');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+  const mermaidRef = useRef(null);
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
+
+  // Initialize Mermaid
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+    });
+  }, []);
+
+  // Render Mermaid diagrams when tab changes or content updates
+  useEffect(() => {
+    if (activeTab === 'visuals' && currentNode?.content && mermaidRef.current) {
+      // Extract mermaid code blocks
+      const match = currentNode.content.match(/```mermaid([\s\S]*?)```/);
+      if (match && match[1]) {
+        mermaid.render(`mermaid-${Date.now()}`, match[1])
+          .then(({ svg }) => {
+            if (mermaidRef.current) {
+              mermaidRef.current.innerHTML = svg;
+            }
+          })
+          .catch(err => console.error('Mermaid render error:', err));
+      } else {
+        if (mermaidRef.current) mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
+      }
+    }
+  }, [activeTab, currentNode]);
 
   // Interactive 3D tilt based on mouse position
   const handleMouseMove = (e) => {
@@ -42,12 +73,19 @@ const LearningHUD = () => {
     });
   };
 
-  // Custom components for ReactMarkdown - process wiki links inline
+  // Custom components for ReactMarkdown
   const markdownComponents = {
     p: ({ children }) => <p>{processChildren(children)}</p>,
     li: ({ children }) => <li>{processChildren(children)}</li>,
     strong: ({ children }) => <strong>{processChildren(children)}</strong>,
     em: ({ children }) => <em>{processChildren(children)}</em>,
+    code: ({ node, inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      if (!inline && match && match[1] === 'mermaid') {
+        return null; // Don't render raw mermaid code, handled by effect
+      }
+      return <code className={className} {...props}>{children}</code>;
+    }
   };
 
   const processChildren = (children) => {
@@ -79,16 +117,45 @@ const LearningHUD = () => {
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
+        {/* Tabs */}
+        <div className="hud-tabs">
+          <button
+            className={`hud-tab ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </button>
+          <button
+            className={`hud-tab ${activeTab === 'deepdive' ? 'active' : ''}`}
+            onClick={() => setActiveTab('deepdive')}
+          >
+            Deep Dive
+          </button>
+          <button
+            className={`hud-tab ${activeTab === 'visuals' ? 'active' : ''}`}
+            onClick={() => setActiveTab('visuals')}
+          >
+            Visuals
+          </button>
+        </div>
+
         {currentNode.content || currentNode.streaming ? (
           <div className="hud-content-scroll">
-            <div className="rich-content">
-              <ReactMarkdown components={markdownComponents}>
-                {currentNode.content || ''}
-              </ReactMarkdown>
-              {currentNode.streaming && (
-                <span className="streaming-cursor">▌</span>
-              )}
-            </div>
+            {activeTab === 'visuals' ? (
+              <div className="visuals-container" ref={mermaidRef}>
+                {/* Mermaid renders here */}
+                {currentNode.streaming && <div className="spinner"></div>}
+              </div>
+            ) : (
+              <div className="rich-content">
+                <ReactMarkdown components={markdownComponents}>
+                  {currentNode.content || ''}
+                </ReactMarkdown>
+                {currentNode.streaming && (
+                  <span className="streaming-cursor">▌</span>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="hud-loading">

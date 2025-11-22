@@ -25,13 +25,10 @@
   font-family: 'Inter', 'Roboto', sans-serif;
   color: #e0f0ff;
 
-  /* 3D Transform & Animation */
+  /* 3D Transform */
   transform-style: preserve-3d;
-  transform: perspective(1500px) rotateY(-10deg) translateX(0);
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease;
-
-  /* Initial Float Animation */
-  animation: hudFloat 6s ease-in-out infinite;
+  /* transform is handled by JS */
+  transition: box-shadow 0.4s ease;
   z-index: 100;
 }
 
@@ -41,19 +38,6 @@
     0 0 50px rgba(0, 100, 255, 0.2),
     0 0 0 1px rgba(100, 200, 255, 0.4) inset;
   background: rgba(10, 20, 30, 0.75);
-  animation-play-state: paused;
-}
-
-@keyframes hudFloat {
-
-  0%,
-  100% {
-    transform: perspective(1500px) rotateY(-10deg) translateY(0px);
-  }
-
-  50% {
-    transform: perspective(1500px) rotateY(-10deg) translateY(-15px);
-  }
 }
 
 /* Header */

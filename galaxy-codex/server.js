@@ -59,6 +59,10 @@ app.get('/galaxy-api/expand-stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Prevent buffering by proxies
+
+  // Send initial ping to establish connection immediately
+  res.write(': ping\n\n');
 
   try {
     console.log(`Streaming content for: ${topic}`);
