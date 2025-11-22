@@ -51,11 +51,45 @@ app.get('/galaxy-api/expand', async (req, res) => {
 
   try {
     console.log(`Generating rich content for: ${topic}`);
-    
+
     const prompt = `
+      You are an expert tutor building a knowledge graph about "${topic}".
+      Write a comprehensive educational article (approx 500-800 words) about this topic.
+      
+      Structure the content with Markdown headers:
+      - ## Overview
+      - ## Key Concepts
+      - ## How It Works
+      - ## Applications
+      - ## Related Fields
+
+      CRITICAL INSTRUCTION:
+      Identify 5-8 key terms or related concepts within the text that a student might want to explore next.
+      Wrap these terms in double brackets like [[Machine Learning]] or [[Neural Networks]].
+      Ensure these terms are natural parts of the sentences.
+
+      Also, assign a "Category" to this topic from one of these 4 options:
+      - "Core AI" (Fundamental concepts)
+      - "Applications" (Real-world uses)
+      - "Theory" (Math, Logic, Philosophy)
+      - "Tools" (Frameworks, Hardware, Software)
+
+      Return the result strictly as a JSON object with this structure:
+      {
+        "name": "${topic}",
+        "category": "One of the 4 categories",
+        "content": "The full markdown article..."
+      }
+      Do not include markdown formatting (like \`\`\`json) around the JSON response.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
     // Clean up potential markdown code blocks
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    
+
     const data = JSON.parse(cleanText);
 
     // Update cache
