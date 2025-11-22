@@ -8,6 +8,7 @@ const GalaxyScene = () => {
   const fgRef = useRef();
   const { graphData, expandNode, setActiveNode } = useStore();
   const rotationRef = useRef(0);
+  const coreRef = useRef(null); // Ref for the Sentient Core animation
 
   // 1. Add Starfield, Lights, and Post-Processing
   useEffect(() => {
@@ -18,8 +19,8 @@ const GalaxyScene = () => {
       const starGeometry = new THREE.BufferGeometry();
       const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0.8 });
       const starVertices = [];
-      for (let i = 0; i < 5000; i++) { // Increased star count
-        const x = (Math.random() - 0.5) * 3000; // Wider field
+      for (let i = 0; i < 5000; i++) {
+        const x = (Math.random() - 0.5) * 3000;
         const y = (Math.random() - 0.5) * 3000;
         const z = (Math.random() - 0.5) * 3000;
         starVertices.push(x, y, z);
@@ -32,17 +33,16 @@ const GalaxyScene = () => {
       const ambientLight = new THREE.AmbientLight(0x404040, 2);
       scene.add(ambientLight);
 
-      const pointLight = new THREE.PointLight(0xffffff, 2); // Brighter
+      const pointLight = new THREE.PointLight(0xffffff, 2);
       pointLight.position.set(100, 100, 100);
       scene.add(pointLight);
 
-      // BLOOM EFFECT (The "Pizzaz")
+      // BLOOM EFFECT
       const bloomPass = new UnrealBloomPass();
-      bloomPass.strength = 2.0; // High glow
+      bloomPass.strength = 2.0;
       bloomPass.radius = 0.5;
       bloomPass.threshold = 0.1;
 
-      // Access the internal composer if available
       const composer = fgRef.current.postProcessingComposer();
       if (composer) {
         composer.addPass(bloomPass);
@@ -50,71 +50,88 @@ const GalaxyScene = () => {
     }
   }, []);
 
-  // Auto-rotation logic
+  // 2. Animation Loop (Auto-rotation + Sentient Core Pulse)
   useEffect(() => {
-    const interval = setInterval(() => {
+    let frameId;
+    const animate = (time) => {
+      // A. Auto-rotation
       if (fgRef.current) {
-        // Gentle rotation
         rotationRef.current += 0.0005;
         const dist = 400;
         const x = dist * Math.sin(rotationRef.current);
         const z = dist * Math.cos(rotationRef.current);
-
-        // Only rotate if not interacting (simple check: we just set camera pos)
-        // Note: This might fight with user controls. 
-        // Better approach: Just rotate the SCENE or the stars?
-        // Let's rotate the camera gently.
         fgRef.current.cameraPosition({ x, z });
       }
-    }, 30);
 
-    return () => clearInterval(interval);
+      // B. Sentient Core Animation
+      if (coreRef.current) {
+        // Rotate whole system
+        coreRef.current.rotation.y += 0.002;
+
+        // Pulse the "Core Cloud"
+        const coreCloud = coreRef.current.children.find(c => c.name === 'coreCloud');
+        if (coreCloud) {
+          const positions = coreCloud.geometry.attributes.position.array;
+          const originals = coreCloud.geometry.userData.originalPositions;
+
+          for (let i = 0; i < positions.length; i += 3) {
+            const v = new THREE.Vector3(originals[i], originals[i + 1], originals[i + 2]);
+            // Pulse math: Sine waves based on position + time
+            const pulse = Math.sin(time * 0.002 + v.x * 0.05) + Math.cos(time * 0.003 + v.y * 0.05);
+            const scale = 1 + (pulse * 0.3);
+
+            positions[i] = originals[i] * scale;
+            positions[i + 1] = originals[i + 1] * scale;
+            positions[i + 2] = originals[i + 2] * scale;
+          }
+          coreCloud.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Rotate Outer Shell
+        const shell = coreRef.current.children.find(c => c.name === 'outerShell');
+        if (shell) {
+          shell.rotation.z -= 0.001;
+          shell.rotation.x -= 0.001;
+        }
+      }
+
+      frameId = requestAnimationFrame(animate);
+    };
+
+    animate(0);
+    return () => cancelAnimationFrame(frameId);
   }, []);
 
   // Category Colors
   const getCategoryColor = (category) => {
     switch (category) {
-      case 'Core AI': return '#00ffff'; // Cyan
-      case 'Applications': return '#00ff00'; // Green
-      case 'Theory': return '#aa00ff'; // Purple
-      case 'Tools': return '#ffaa00'; // Orange
-      default: return '#aaddff'; // Default Light Blue
+      case 'Core AI': return '#00ffff';
+      case 'Applications': return '#00ff00';
+      case 'Theory': return '#aa00ff';
+      case 'Tools': return '#ffaa00';
+      default: return '#aaddff';
     }
   };
 
   const handleClick = useCallback(async (node) => {
     if (!fgRef.current) return;
-
-    // Capture coords immediately
     const { x, y, z, id } = node;
-
-    console.log('Clicking node at:', x, y, z);
-
-    // Fly camera logic
     const distance = 60;
     const distRatio = 1 + distance / Math.hypot(x, y, z);
 
-    // Handle origin case (0,0,0) to prevent Infinity/NaN
     let targetX = 0, targetY = 0, targetZ = 0;
     if (!x && !y && !z) {
-      targetX = 0;
-      targetY = 0;
-      targetZ = distance;
+      targetX = 0; targetY = 0; targetZ = distance;
     } else {
-      targetX = x * distRatio;
-      targetY = y * distRatio;
-      targetZ = z * distRatio;
+      targetX = x * distRatio; targetY = y * distRatio; targetZ = z * distRatio;
     }
 
     fgRef.current.cameraPosition(
-      { x: targetX, y: targetY, z: targetZ }, // Target pos
-      { x: x || 0, y: y || 0, z: z || 0 }, // Look at
-      2000  // Transition time
+      { x: targetX, y: targetY, z: targetZ },
+      { x: x || 0, y: y || 0, z: z || 0 },
+      2000
     );
-
     setActiveNode(id);
-    // NO EXPANSION ON CLICK - Interaction Model Change
-    // await expandNode(id); 
   }, [setActiveNode]);
 
   // Create circular particle texture
@@ -123,41 +140,106 @@ const GalaxyScene = () => {
     canvas.width = 32;
     canvas.height = 32;
     const ctx = canvas.getContext('2d');
-
-    // Draw soft circular gradient
     const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
     gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
     gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 32, 32);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    return texture;
+    return new THREE.CanvasTexture(canvas);
   }, []);
 
-  // Custom Node Object: Particle Cloud ("Spongey Planet" made of stars)
+  // Custom Node Object
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
     const color = new THREE.Color(getCategoryColor(node.category) || node.color || '#00ffff');
     const radius = node.val ? node.val / 5 : 4;
     const circleTexture = createCircleTexture();
 
-    // 1. Dense Particle Cloud - many tiny stars forming the planet
-    const particleCount = 600; // Increased density
+    // --- SPECIAL "SENTIENT CORE" RENDERER ---
+    if (node.type === 'core') {
+      // 1. Core Cloud (Pulsing)
+      const particleCount = 2000;
+      // BufferGeometry for points
+      const pGeo = new THREE.BufferGeometry();
+      const pPos = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        const r = radius * Math.cbrt(Math.random());
+        const theta = Math.random() * 2 * Math.PI;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        pPos.push(x, y, z);
+      }
+
+      pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+      pGeo.userData.originalPositions = [...pPos]; // Save for animation
+
+      const pMat = new THREE.PointsMaterial({
+        color: 0xff3366, // Hot Pink/Red for Core
+        size: 1.5,
+        map: circleTexture,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const cloud = new THREE.Points(pGeo, pMat);
+      cloud.name = 'coreCloud';
+      group.add(cloud);
+
+      // Save to ref for animation loop
+      coreRef.current = group;
+
+      // 2. Outer Shell (Data Orbit)
+      const shellCount = 1000;
+      const shellGeo = new THREE.BufferGeometry();
+      const shellPos = [];
+      for (let i = 0; i < shellCount; i++) {
+        // Points on sphere surface
+        const r = radius * 2.5;
+        const theta = Math.random() * 2 * Math.PI;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        shellPos.push(x, y, z);
+      }
+      shellGeo.setAttribute('position', new THREE.Float32BufferAttribute(shellPos, 3));
+
+      const shellMat = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.8,
+        map: circleTexture,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const shellPoints = new THREE.Points(shellGeo, shellMat);
+      shellPoints.name = 'outerShell';
+      group.add(shellPoints);
+
+      return group;
+    }
+
+    // --- STANDARD "SPONGEY PLANET" RENDERER ---
+    // 1. Dense Particle Cloud
+    const particleCount = 600;
     const particlesGeometry = new THREE.BufferGeometry();
     const particlePositions = [];
     const particleSizes = [];
 
     for (let i = 0; i < particleCount; i++) {
-      // Spherical distribution with denser core
       const u = Math.random();
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      // Use power distribution for denser core
       const r = Math.pow(Math.random(), 0.7) * radius;
 
       const x = r * Math.sin(phi) * Math.cos(theta);
@@ -165,7 +247,6 @@ const GalaxyScene = () => {
       const z = r * Math.cos(phi);
 
       particlePositions.push(x, y, z);
-      // Vary sizes - smaller toward edges, bigger in core
       particleSizes.push(0.3 + (1 - r / radius) * 1.2);
     }
 
@@ -186,8 +267,8 @@ const GalaxyScene = () => {
     const cloud = new THREE.Points(particlesGeometry, particlesMaterial);
     group.add(cloud);
 
-    // 2. Outer halo particles (sparse, larger, dimmer)
-    const haloCount = 120; // More halo
+    // 2. Outer halo
+    const haloCount = 120;
     const haloGeometry = new THREE.BufferGeometry();
     const haloPositions = [];
 
@@ -196,7 +277,7 @@ const GalaxyScene = () => {
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      const r = radius * (1 + Math.random() * 0.5); // Wider halo
+      const r = radius * (1 + Math.random() * 0.5);
 
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);
@@ -225,7 +306,7 @@ const GalaxyScene = () => {
     const coreMat = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.6, // Brighter core
+      opacity: 0.6,
       blending: THREE.AdditiveBlending
     });
     const core = new THREE.Mesh(coreGeo, coreMat);

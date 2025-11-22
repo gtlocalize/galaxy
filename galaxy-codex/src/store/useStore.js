@@ -11,6 +11,7 @@ const useStore = create((set, get) => ({
         val: 80,
         color: '#00ffff',
         category: 'Core AI',
+        type: 'core', // Special visual treatment
         // Initial content to get started without API call if needed
         content: `
 # Artificial Intelligence
