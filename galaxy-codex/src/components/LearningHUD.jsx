@@ -9,38 +9,43 @@ const LearningHUD = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
-  const [mermaidSvg, setMermaidSvg] = useState(''); // State for SVG string to avoid DOM conflicts
+  const [mermaidSvg, setMermaidSvg] = useState('');
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
   // Reset tab when node changes
   useEffect(() => {
     setActiveTab('overview');
-    setMermaidSvg(''); // Clear diagram
+    setMermaidSvg(''); 
   }, [activeNode]);
 
-  // Initialize Mermaid
+  // Initialize Mermaid with Holographic Theme
   useEffect(() => {
     mermaid.initialize({
-      startOnLoad: false, // We render manually
-      theme: 'dark',
+      startOnLoad: false,
+      theme: 'base', // Use base to override easier
       securityLevel: 'loose',
       fontFamily: 'Inter',
       themeVariables: {
         darkMode: true,
         background: 'transparent',
-        primaryColor: '#00ffff',
-        edgeLabelBackground: '#000000',
-        tertiaryColor: '#111111'
+        mainBkg: 'rgba(0, 20, 40, 0.5)', // Dark glass node background
+        nodeBorder: '#00ffff', // Neon Cyan
+        clusterBkg: 'rgba(255, 255, 255, 0.05)',
+        titleColor: '#00ffff',
+        edgeLabelBackground: 'rgba(0, 0, 0, 0.8)',
+        lineColor: '#0088ff',
+        textColor: '#e0f0ff',
+        primaryColor: '#002244',
+        primaryTextColor: '#00ffff',
+        primaryBorderColor: '#00ffff'
       }
     });
   }, []);
 
-  // Render Mermaid diagrams when tab changes or content updates
+  // Render Mermaid diagrams
   useEffect(() => {
-    // Only run if Visuals tab is active and we have content
     if (activeTab === 'visuals' && currentNode?.content) {
-      // Extract mermaid code blocks
       const match = currentNode.content.match(/```(mermaid|graph)([\s\S]*?)```/i);
       
       if (match && match[2]) {
@@ -50,7 +55,6 @@ const LearningHUD = () => {
         try {
             mermaid.render(id, graphDefinition)
             .then(({ svg }) => {
-                // React State update is safe
                 setMermaidSvg(svg);
             })
             .catch(err => {

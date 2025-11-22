@@ -2,13 +2,13 @@ import { create } from 'zustand';
 
 const useStore = create((set, get) => ({
   // Initial State
-  activeNode: 'Artificial Intelligence', // Start focused on root
+  activeNode: 'artificial_intelligence', // Normalized ID
   graphData: {
     nodes: [
-      {
-        id: 'Artificial Intelligence',
-        name: 'Artificial Intelligence',
-        val: 80,
+      { 
+        id: 'artificial_intelligence', 
+        name: 'Artificial Intelligence', 
+        val: 80, 
         color: '#00ffff',
         category: 'Core AI',
         type: 'core', // Special visual treatment
@@ -35,11 +35,6 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
 
   // Actions
   setActiveNode: (nodeId) => set({ activeNode: nodeId }),
-
-  expandNode: async (nodeId) => {
-    // This is now mostly internal or used for initial expansion
-    // Real expansion happens via handleLinkClick
-  },
 
   fetchNodeContent: async (nodeId, topicName) => {
     const { graphData } = get();
@@ -136,17 +131,33 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
   handleLinkClick: async (term, parentNodeId) => {
     const { graphData, setActiveNode, fetchNodeContent } = get();
 
-    // 1. Check if node already exists
-    const existingNode = graphData.nodes.find(n => n.name.toLowerCase() === term.toLowerCase());
+    // 1. Normalize ID to ensure graph connectivity (Graph vs Tree)
+    const newNodeId = term.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_');
+    
+    // 2. Check if node already exists
+    const existingNode = graphData.nodes.find(n => n.id === newNodeId);
 
     if (existingNode) {
-      setActiveNode(existingNode.id);
-      // Fly to it (handled by GalaxyScene observing activeNode)
+      // Just link to it if not linked
+      const linkExists = graphData.links.some(l => 
+        (l.source.id === parentNodeId && l.target.id === newNodeId) ||
+        (l.source === parentNodeId && l.target === newNodeId)
+      );
+
+      if (!linkExists) {
+         set(state => ({
+            graphData: {
+                ...state.graphData,
+                links: [...state.graphData.links, { source: parentNodeId, target: newNodeId }]
+            }
+         }));
+      }
+
+      setActiveNode(newNodeId);
       return;
     }
 
-    // 2. Create new node
-    const newNodeId = `${parentNodeId}_${term.replace(/\s+/g, '_')}`;
+    // 3. Create new node
     const newNode = {
       id: newNodeId,
       name: term,
@@ -160,6 +171,8 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
       target: newNodeId
     };
 
+    console.log('Creating Link:', parentNodeId, '->', newNodeId);
+
     set(state => ({
       graphData: {
         nodes: [...state.graphData.nodes, newNode],
@@ -168,7 +181,7 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
       activeNode: newNodeId
     }));
 
-    // 3. Fetch content for the new node
+    // 4. Fetch content for the new node
     await get().fetchNodeContent(newNodeId, term);
   }
 }));
