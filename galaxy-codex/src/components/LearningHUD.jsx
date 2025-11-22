@@ -28,15 +28,27 @@ const LearningHUD = () => {
       // Extract mermaid code blocks
       const match = currentNode.content.match(/```mermaid([\s\S]*?)```/);
       if (match && match[1]) {
-        mermaid.render(`mermaid-${Date.now()}`, match[1])
+        // Clear previous content safely
+        mermaidRef.current.innerHTML = '';
+
+        // Create a unique ID for the diagram
+        const id = `mermaid-${Date.now()}`;
+
+        mermaid.render(id, match[1])
           .then(({ svg }) => {
             if (mermaidRef.current) {
               mermaidRef.current.innerHTML = svg;
             }
           })
-          .catch(err => console.error('Mermaid render error:', err));
+          .catch(err => {
+            console.error('Mermaid render error:', err);
+            if (mermaidRef.current) {
+              mermaidRef.current.innerHTML = '<p class="error-msg">Failed to render visualization.</p>';
+            }
+          });
       } else {
-        if (mermaidRef.current) mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
+        // No mermaid code found
+        mermaidRef.current.innerHTML = '<p class="no-visuals">No visualization available for this topic.</p>';
       }
     }
   }, [activeTab, currentNode]);

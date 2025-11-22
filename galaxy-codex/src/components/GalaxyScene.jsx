@@ -13,8 +13,8 @@ const GalaxyScene = () => {
   useEffect(() => {
     if (fgRef.current) {
       // Configure Forces
-      fgRef.current.d3Force('charge').strength(-120);
-      fgRef.current.d3Force('link').distance(70);
+      fgRef.current.d3Force('charge').strength(-300);
+      fgRef.current.d3Force('link').distance(100);
 
       const scene = fgRef.current.scene();
 
@@ -320,9 +320,9 @@ const GalaxyScene = () => {
         showNavInfo={false}
 
         // Physics - Spaced out
-        d3AlphaDecay={0.02}
-        d3VelocityDecay={0.3}
-        cooldownTicks={200}
+        d3AlphaDecay={0.01}
+        d3VelocityDecay={0.1}
+        cooldownTicks={300}
         onEngineStop={() => fgRef.current.zoomToFit(400)} // Optional: fit to view when done
 
         // Link Styling
