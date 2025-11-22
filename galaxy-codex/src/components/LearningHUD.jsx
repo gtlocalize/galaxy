@@ -79,11 +79,11 @@ const LearningHUD = () => {
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
-        {currentNode.content ? (
+        {currentNode.content || currentNode.streaming ? (
           <div className="hud-content-scroll">
             <div className="rich-content">
               <ReactMarkdown components={markdownComponents}>
-                {currentNode.content}
+                {currentNode.content || ''}
               </ReactMarkdown>
               {currentNode.streaming && (
                 <span className="streaming-cursor">▌</span>

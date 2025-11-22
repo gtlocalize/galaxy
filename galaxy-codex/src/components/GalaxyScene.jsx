@@ -12,6 +12,10 @@ const GalaxyScene = () => {
   // 1. Add Starfield, Lights, and Post-Processing
   useEffect(() => {
     if (fgRef.current) {
+      // Configure Forces
+      fgRef.current.d3Force('charge').strength(-120);
+      fgRef.current.d3Force('link').distance(70);
+
       const scene = fgRef.current.scene();
 
       // Create stars
@@ -315,9 +319,11 @@ const GalaxyScene = () => {
         backgroundColor="#000000"
         showNavInfo={false}
 
-        // Physics
-        d3VelocityDecay={0.1}
-        cooldownTicks={100}
+        // Physics - Spaced out
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
+        cooldownTicks={200}
+        onEngineStop={() => fgRef.current.zoomToFit(400)} // Optional: fit to view when done
 
         // Link Styling
         linkColor={() => '#4444aa'}
