@@ -22,13 +22,14 @@ const LearningHUD = () => {
   // Custom renderer for [[wiki-links]]
   const renderContent = (content) => {
     if (!content) return null;
-    const processed = content.replace(/\[\[(.*?)\]\]/g, '[$1](wiki:$1)');
+    // URL-encode the href to handle spaces in terms
+    const processed = content.replace(/\[\[(.*?)\]\]/g, (_, term) => `[${term}](wiki:${encodeURIComponent(term)})`);
 
     return (
       <ReactMarkdown components={{
         a: ({ href, children }) => {
           if (href && href.startsWith('wiki:')) {
-            const term = href.replace('wiki:', '');
+            const term = decodeURIComponent(href.replace('wiki:', ''));
             return (
               <span
                 className="wiki-link"
