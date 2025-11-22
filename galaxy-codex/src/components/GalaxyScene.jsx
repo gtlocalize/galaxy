@@ -1,6 +1,5 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
-import SpriteText from 'three-spritetext';
 import * as THREE from 'three';
 import useStore from '../store/useStore';
 
@@ -8,7 +7,7 @@ const GalaxyScene = () => {
   const fgRef = useRef();
   const { graphData, expandNode, setActiveNode } = useStore();
 
-  // 1. Add Starfield Background on Mount (Direct Three.js manipulation)
+  // 1. Add Starfield Background on Mount
   useEffect(() => {
     if (fgRef.current) {
       const scene = fgRef.current.scene();
@@ -27,7 +26,7 @@ const GalaxyScene = () => {
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
       
-      // Add ambient glow/lights manually since we aren't in R3F Canvas
+      // Add ambient glow/lights
       const ambientLight = new THREE.AmbientLight(0x404040, 2); 
       scene.add(ambientLight);
       
@@ -54,7 +53,7 @@ const GalaxyScene = () => {
     await expandNode(node.id);
   }, [expandNode, setActiveNode]);
 
-  // Custom Node Object: Glowing Sphere + Sprite Text
+  // Custom Node Object: Glowing Sphere (No Text to prevent crash)
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
 
@@ -72,7 +71,7 @@ const GalaxyScene = () => {
     const sphere = new THREE.Mesh(geometry, material);
     group.add(sphere);
 
-    // 2. Wireframe Overlay (Tech look)
+    // 2. Wireframe Overlay
     const wireGeo = new THREE.IcosahedronGeometry((node.val ? node.val / 5 : 4) * 1.2, 1);
     const wireMat = new THREE.MeshBasicMaterial({
         color: node.color || '#00ffff',
@@ -83,24 +82,17 @@ const GalaxyScene = () => {
     const wire = new THREE.Mesh(wireGeo, wireMat);
     group.add(wire);
 
-    // 3. The Floating Label (SpriteText)
-    const sprite = new SpriteText(node.name);
-    sprite.color = 'rgba(255,255,255,0.9)';
-    sprite.textHeight = 3;
-    sprite.position.set(0, (node.val ? node.val / 5 : 4) + 5, 0); // Float above sphere
-    group.add(sprite);
-
     return group;
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
+    <div style={{ width: '100%', height: '100%', background: '#000' }}>
         <ForceGraph3D
           ref={fgRef}
           graphData={graphData}
           
           // Global Config
-          backgroundColor="#000005"
+          backgroundColor="#000000"
           showNavInfo={false}
           
           // Physics
