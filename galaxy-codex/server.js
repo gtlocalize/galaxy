@@ -54,33 +54,43 @@ app.get('/galaxy-api/expand', async (req, res) => {
 
     const prompt = `
       You are an expert tutor building a knowledge graph about "${topic}".
-      Write a comprehensive educational article (approx 500-800 words) about this topic.
       
-      Structure the content with Markdown headers:
-      - ## Overview
-      - ## Key Concepts
-      - ## How It Works
-      - ## Applications
-      - ## Related Fields
-
-      CRITICAL INSTRUCTION:
-      Identify 5-8 key terms or related concepts within the text that a student might want to explore next.
-      Wrap these terms in double brackets like [[Machine Learning]] or [[Neural Networks]].
-      Ensure these terms are natural parts of the sentences.
-
-      Also, assign a "Category" to this topic from one of these 4 options:
-      - "Core AI" (Fundamental concepts)
-      - "Applications" (Real-world uses)
-      - "Theory" (Math, Logic, Philosophy)
-      - "Tools" (Frameworks, Hardware, Software)
-
-      Return the result strictly as a JSON object with this structure:
+      GOAL: Create a deep, interactive educational module about this topic.
+      
+      OUTPUT FORMAT:
+      Return a JSON object with the following structure:
       {
         "name": "${topic}",
-        "category": "One of the 4 categories",
-        "content": "The full markdown article..."
+        "category": "One of: Core AI, Applications, Theory, Tools",
+        "tabs": [
+          {
+            "id": "overview",
+            "label": "Overview",
+            "content": "Markdown content (300 words). Introduction, importance, and high-level summary. Use [[wiki-links]]."
+          },
+          {
+            "id": "deep_dive",
+            "label": "Deep Dive",
+            "content": "Markdown content (500-800 words). Detailed explanation, how it works, math/logic if applicable, and challenges. Use [[wiki-links]]."
+          },
+          {
+            "id": "visuals",
+            "label": "Visuals",
+            "content": "Explain the concept using a diagram.",
+            "diagram": "Mermaid.js code string (e.g., graph TD...)"
+          }
+        ]
       }
-      Do not include markdown formatting (like \`\`\`json) around the JSON response.
+
+      DIAGRAM INSTRUCTIONS:
+      - Create a Mermaid.js diagram that best explains the concept (flowchart, sequence diagram, or class diagram).
+      - Keep it simple but informative.
+      - Do NOT wrap the mermaid code in markdown blocks in the JSON field. Just the raw string.
+
+      CRITICAL:
+      - Identify 5-8 key terms in the text and wrap them in [[double brackets]].
+      - Ensure the JSON is valid.
+      - Do not include markdown formatting (like \`\`\`json) around the JSON response.
     `;
 
     const result = await model.generateContent(prompt);

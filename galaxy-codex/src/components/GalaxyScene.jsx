@@ -82,35 +82,56 @@ const GalaxyScene = () => {
     // await expandNode(id); 
   }, [setActiveNode]);
 
-  // Custom Node Object: Glowing Sphere
+  // Custom Node Object: Particle Cloud ("Spongey Planet")
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
     const color = getCategoryColor(node.category) || node.color || '#00ffff';
+    const radius = node.val ? node.val / 5 : 4;
 
-    // 1. The Glowing Sphere
-    const geometry = new THREE.SphereGeometry(node.val ? node.val / 5 : 4, 32, 32);
-    const material = new THREE.MeshPhysicalMaterial({
-      color: color,
-      emissive: color,
-      emissiveIntensity: 0.5,
-      roughness: 0.1,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.9
-    });
-    const sphere = new THREE.Mesh(geometry, material);
-    group.add(sphere);
+    // 1. Particle Cloud
+    const particleCount = 150;
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlePositions = [];
 
-    // 2. Wireframe Overlay
-    const wireGeo = new THREE.IcosahedronGeometry((node.val ? node.val / 5 : 4) * 1.2, 1);
-    const wireMat = new THREE.MeshBasicMaterial({
+    for (let i = 0; i < particleCount; i++) {
+      // Random point inside sphere
+      // We use rejection sampling or spherical coords to get a nice distribution
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      const r = Math.cbrt(Math.random()) * radius; // cbrt for uniform distribution
+
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+
+      particlePositions.push(x, y, z);
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particlePositions, 3));
+
+    const particlesMaterial = new THREE.PointsMaterial({
       color: color,
-      wireframe: true,
+      size: 0.8,
       transparent: true,
-      opacity: 0.15
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
     });
-    const wire = new THREE.Mesh(wireGeo, wireMat);
-    group.add(wire);
+
+    const cloud = new THREE.Points(particlesGeometry, particlesMaterial);
+    group.add(cloud);
+
+    // 2. Core Glow (Subtle internal light)
+    const coreGeo = new THREE.SphereGeometry(radius * 0.4, 16, 16);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    group.add(core);
 
     return group;
   }, []);

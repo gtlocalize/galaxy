@@ -57,7 +57,7 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
           ...state.graphData,
           nodes: state.graphData.nodes.map(n =>
             n.id === nodeId
-              ? { ...n, content: data.content, category: data.category, summary: null } // Replace summary with full content
+              ? { ...n, tabs: data.tabs, category: data.category, summary: null } // Store tabs
               : n
           )
         }
