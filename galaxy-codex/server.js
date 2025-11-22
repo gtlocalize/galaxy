@@ -50,23 +50,33 @@ app.get('/galaxy-api/expand', async (req, res) => {
   }
 
   try {
-    console.log(`Generating expansion for: ${topic}`);
+    console.log(`Generating rich content for: ${topic}`);
     
     const prompt = `
-      You are an expert tutor building a knowledge graph.
-      Given the topic "${topic}", list 5-7 key sub-concepts or related topics that a student should learn next.
-      For each sub-concept, provide a concise 1-sentence summary.
+      Write a comprehensive educational entry about "${topic}" for an interactive learning graph.
+      Target audience: University students or self-learners.
       
-      Return the result strictly as a JSON array of objects with keys: "name" and "summary".
-      Example: [{"name": "Concept", "summary": "Description..."}]
-      Do not include markdown formatting or backticks in the response.
+      Requirements:
+      1. Content Length: 300-500 words.
+      2. Structure: Use Markdown headers (# Overview, ## Key Concepts, ## Applications, ## History).
+      3. Interactivity: Identify 5-10 key terms or related concepts that a user might want to explore next. Wrap these terms in double brackets like [[Machine Learning]] or [[Neural Networks]].
+      4. Context: Assign a "category" to this topic (e.g., "Core AI", "Math", "History", "Tools", "Applications", "Ethics").
+      
+      Return the result strictly as a JSON object with the following keys:
+      {
+        "name": "${topic}",
+        "category": "Category Name",
+        "content": "Markdown string..."
+      }
+      
+      Do not include markdown code blocks (like \`\`\`json) in the response, just the raw JSON string.
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
     
-    // Clean up potential markdown code blocks if the model ignores instruction
+    // Clean up potential markdown code blocks
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     const data = JSON.parse(cleanText);
@@ -86,4 +96,3 @@ app.get('/galaxy-api/expand', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-

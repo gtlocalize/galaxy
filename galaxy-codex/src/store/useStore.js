@@ -2,15 +2,31 @@ import { create } from 'zustand';
 
 const useStore = create((set, get) => ({
   // Initial State
-  activeNode: 'ai_root',
+  activeNode: 'Artificial Intelligence', // Start focused on root
   graphData: {
     nodes: [
       { 
-        id: 'ai_root', 
+        id: 'Artificial Intelligence', 
         name: 'Artificial Intelligence', 
         val: 80, 
         color: '#00ffff',
-        summary: 'The simulation of human intelligence processes by computer systems.'
+        category: 'Core AI',
+        // Initial content to get started without API call if needed
+        content: `
+# Artificial Intelligence
+
+Artificial Intelligence (AI) is the simulation of human intelligence processes by computer systems. These processes include learning (the acquisition of information and rules for using the information), reasoning (using rules to reach approximate or definite conclusions), and self-correction.
+
+## Key Concepts
+
+At the heart of AI lies [[Machine Learning]], which enables systems to learn from data. More advanced forms include [[Deep Learning]] and [[Neural Networks]], which mimic the human brain's structure.
+
+AI is often categorized into [[Narrow AI]] (designed for specific tasks) and [[General AI]] (hypothetical systems with human-level cognition).
+
+## Applications
+
+AI is transforming fields such as [[Natural Language Processing]], [[Computer Vision]], and [[Robotics]].
+        `
       }
     ],
     links: []
@@ -19,83 +35,113 @@ const useStore = create((set, get) => ({
   // Actions
   setActiveNode: (nodeId) => set({ activeNode: nodeId }),
 
+  // Expand Node: Fetches rich content and spawns children based on [[wikilinks]]
   expandNode: async (nodeId) => {
     const { graphData } = get();
     const node = graphData.nodes.find(n => n.id === nodeId);
     
-    // Basic check to see if we've already expanded this node (simple heuristic: does it have outgoing links?)
-    // In a real app, we might track 'expanded' state on the node itself.
-    const hasChildren = graphData.links.some(l => l.source === nodeId || l.source.id === nodeId);
-    
-    if (hasChildren) {
-      console.log('Node already expanded:', nodeId);
+    // If node already has processed content (and thus children spawned), we might just want to ensure it's active.
+    // But maybe we want to re-fetch if it was just a stub?
+    // We check if 'content' is fully populated (length > 100 is a heuristic, or a flag).
+    const isStub = !node.content || node.content.length < 100;
+
+    if (!isStub) {
+      console.log('Node already expanded/loaded:', nodeId);
       return;
     }
 
     try {
       // Call backend API
-      // The backend is running on /galaxy-api/expand
       const response = await fetch(`/galaxy-api/expand?topic=${encodeURIComponent(node.name)}`);
-      if (!response.ok) throw new Error('Failed to fetch expansion data');
       
-      const data = await response.json(); 
-      // Expected data format: [{ name: "...", summary: "..." }, ...]
+      let data;
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        throw new Error('Backend failed');
+      }
 
-      // Process new nodes
-      const newNodes = data.map((item, index) => ({
-        id: `${nodeId}_${index}`, // Unique ID
-        name: item.name,
-        summary: item.summary,
-        val: 20, // Smaller size for children
-        color: '#aaddff' // Light blue for children
-      }));
+      // 1. Update the current node with rich content
+      const updatedNode = {
+        ...node,
+        category: data.category,
+        content: data.content
+      };
 
-      // Create links from parent to new children
-      const newLinks = newNodes.map(child => ({
-        source: nodeId,
-        target: child.id
-      }));
+      // 2. Parse [[wikilinks]] to find children
+      const linkRegex = /\[\[(.*?)\]\]/g;
+      const matches = [...data.content.matchAll(linkRegex)];
+      const childNames = matches.map(m => m[1]); // Extract term inside brackets
+      
+      const uniqueChildren = [...new Set(childNames)]; // Dedupe
+
+      // 3. Create new Stub Nodes for children
+      const newNodes = [];
+      const newLinks = [];
+
+      uniqueChildren.forEach(childName => {
+        // Check if node exists
+        const exists = graphData.nodes.find(n => n.id === childName);
+        
+        if (!exists) {
+          newNodes.push({
+            id: childName,
+            name: childName,
+            val: 20, // Smaller size for children
+            color: '#aaddff', // Default color, could be based on category later
+            content: '' // Stub content
+          });
+        }
+
+        // Check if link exists
+        const linkExists = graphData.links.some(l => 
+          (l.source === nodeId || l.source.id === nodeId) && 
+          (l.target === childName || l.target.id === childName)
+        );
+
+        if (!linkExists) {
+          newLinks.push({
+            source: nodeId,
+            target: childName
+          });
+        }
+      });
+
+      // 4. Update Graph Data
+      // We replace the expanded node in the array and add new ones
+      const updatedNodes = graphData.nodes.map(n => n.id === nodeId ? updatedNode : n);
 
       set(state => ({
         graphData: {
-          nodes: [...state.graphData.nodes, ...newNodes],
+          nodes: [...updatedNodes, ...newNodes],
           links: [...state.graphData.links, ...newLinks]
         }
       }));
 
     } catch (error) {
       console.error('Error expanding node:', error);
-      // Fallback/Mock for demo if backend fails
-      console.log('Using fallback mock data');
-      const mockChildren = [
-        { name: 'Machine Learning', summary: 'Algorithms that improve through experience.' },
-        { name: 'Neural Networks', summary: 'Computing systems inspired by biological brains.' },
-        { name: 'Robotics', summary: 'Design and construction of robots.' },
-        { name: 'NLP', summary: 'Interaction between computers and human language.' }
-      ];
+      // Fallback for demo/offline
+      console.log('Using offline fallback');
       
-      const newNodes = mockChildren.map((item, index) => ({
-        id: `${nodeId}_mock_${index}`,
-        name: item.name,
-        summary: item.summary,
-        val: 20,
-        color: '#ffaa00' // Orange for mock data
-      }));
+      const fallbackContent = `
+# ${node.name} (Offline)
 
-      const newLinks = newNodes.map(child => ({
-        source: nodeId,
-        target: child.id
-      }));
+Content could not be fetched. Imagine a great article here about **${node.name}**.
 
-      set(state => ({
-        graphData: {
-          nodes: [...state.graphData.nodes, ...newNodes],
-          links: [...state.graphData.links, ...newLinks]
-        }
-      }));
+## Related Topics
+- [[Machine Learning]]
+- [[Neural Networks]]
+- [[Data Science]]
+      `;
+      
+      const updatedNode = { ...node, content: fallbackContent };
+      // We won't spawn children in fallback to avoid infinite loops of bad data, 
+      // unless we parse the fallback content specifically.
+      
+      const updatedNodes = graphData.nodes.map(n => n.id === nodeId ? updatedNode : n);
+      set({ graphData: { ...graphData, nodes: updatedNodes } });
     }
   }
 }));
 
 export default useStore;
-
