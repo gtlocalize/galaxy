@@ -39,21 +39,25 @@ const GalaxyScene = () => {
   const handleClick = useCallback(async (node) => {
     if (!fgRef.current) return;
 
-    // Fly camera to node
+    // FIX: Capture coordinates immediately so we don't track a stale object reference
+    // if the graph re-generates the node object during expansion.
+    const { x, y, z, id } = node;
+
+    // Fly camera to these static coordinates
     const distance = 60;
-    const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+    const distRatio = 1 + distance/Math.hypot(x, y, z);
 
     fgRef.current.cameraPosition(
-      { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // Target pos
-      node, // Look at node
+      { x: x * distRatio, y: y * distRatio, z: z * distRatio }, // Target pos
+      { x, y, z }, // Look at (static coords)
       2000  // Transition time
     );
 
-    setActiveNode(node.id);
-    await expandNode(node.id);
+    setActiveNode(id);
+    await expandNode(id);
   }, [expandNode, setActiveNode]);
 
-  // Custom Node Object: Glowing Sphere (No Text to prevent crash)
+  // Custom Node Object: Glowing Sphere
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
 
