@@ -192,9 +192,19 @@
 }
 
 .wiki-link {
+  /* Reset button styles */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  display: inline;
+
+  /* Link styling */
   color: #00ffff;
   cursor: pointer;
   text-decoration: underline;
+  text-decoration-style: dashed;
   text-underline-offset: 3px;
   font-weight: 600;
   transition: all 0.2s;
@@ -203,6 +213,8 @@
 .wiki-link:hover {
   color: #fff;
   text-shadow: 0 0 8px #00ffff;
+  text-decoration-style: solid;
+  background: rgba(0, 255, 255, 0.1);
 }
 
 /* Loading Spinner */

@@ -19,35 +19,33 @@ const LearningHUD = () => {
 
   const currentTabContent = currentNode.tabs?.find(t => t.id === activeTab);
 
-  // Custom renderer for [[wiki-links]]
+  // Custom renderer - split content by [[wiki-links]] and render them as buttons
   const renderContent = (content) => {
     if (!content) return null;
-    // URL-encode the href to handle spaces in terms
-    const processed = content.replace(/\[\[(.*?)\]\]/g, (_, term) => `[${term}](wiki:${encodeURIComponent(term)})`);
 
-    return (
-      <ReactMarkdown components={{
-        a: ({ href, children }) => {
-          if (href && href.startsWith('wiki:')) {
-            const term = decodeURIComponent(href.replace('wiki:', ''));
-            return (
-              <span
-                className="wiki-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleLinkClick(term, currentNode.id);
-                }}
-              >
-                {children}
-              </span>
-            );
-          }
-          return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-        }
-      }}>
-        {processed}
-      </ReactMarkdown>
-    );
+    // Split by [[wiki-links]] keeping the delimiters
+    const parts = content.split(/(\[\[.*?\]\])/g);
+
+    return parts.map((part, index) => {
+      // Check if this is a wiki link
+      const match = part.match(/^\[\[(.*?)\]\]$/);
+      if (match) {
+        const term = match[1];
+        return (
+          <button
+            key={index}
+            type="button"
+            className="wiki-link"
+            onClick={() => handleLinkClick(term, currentNode.id)}
+          >
+            {term}
+          </button>
+        );
+      }
+      // Regular markdown - render without wiki links
+      if (!part.trim()) return null;
+      return <ReactMarkdown key={index}>{part}</ReactMarkdown>;
+    });
   };
 
   return (
