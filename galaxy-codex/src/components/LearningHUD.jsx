@@ -63,17 +63,11 @@ const LearningHUD = () => {
     const x = (e.clientX - rect.left) / rect.width - 0.5; 
     const y = (e.clientY - rect.top) / rect.height - 0.5;
     
-    // FLIPPED LOGIC for "Push Away" effect
-    // If cursor is on Right (positive x), we want right side to go BACK (negative rotation Y? No, positive rotation Y)
-    // Actually, standard CSS: rotateY(10deg) pushes right side away (back).
-    // So positive X cursor -> Positive Y rotation.
-    
+    // Reversed tilt: Push away from cursor (Positive X -> Positive Y rotation)
     setTilt({ x: -y * 15, y: x * 15 }); 
   };
 
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-  };
+  // REMOVED handleMouseLeave to persist tilt state
 
   if (!currentNode) return null;
 
@@ -95,21 +89,29 @@ const LearningHUD = () => {
 
   if (splitIndex !== -1) {
     overviewContent = currentNode.content.substring(0, splitIndex);
-    // Deep Dive contains everything after the marker, excluding Visuals section if present
-    let rest = currentNode.content.substring(splitIndex);
-    
-    // Strip Visuals section from text views
-    const visualMarker = rest.match(/## (Visuals|Diagram|Architecture)/);
-    if (visualMarker) {
-        deepDiveContent = rest.substring(0, visualMarker.index);
-    } else {
-        deepDiveContent = rest;
-    }
+    // Deep Dive contains everything after the marker
+    deepDiveContent = currentNode.content.substring(splitIndex);
   } else {
-      // Fallback: If no Deep Dive header, just show everything in Overview
-      // But we can try to split by character count if it's huge? No, better to just show all.
+      // Fallback: If no Deep Dive header, everything is overview.
+      // But we check if there's a lot of content, maybe we can split?
+      // For now, just leave deepDiveContent empty or show a message.
       deepDiveContent = "### No detailed technical breakdown available for this summary.";
   }
+
+  // Helper to strip Visuals section and Mermaid blocks from text views
+  const cleanText = (text) => {
+      if (!text) return '';
+      // Remove the Visuals section entirely (header + content until end or next major section)
+      // Actually, regex is hard if we don't know next section. 
+      // Prompt puts Visuals near end.
+      let cleaned = text.replace(/## (Visuals|Diagram|Architecture)[\s\S]*?$/, '');
+      // Also strip any remaining mermaid code blocks just in case
+      cleaned = cleaned.replace(/```(mermaid|graph)[\s\S]*?```/gi, '');
+      return cleaned;
+  };
+
+  overviewContent = cleanText(overviewContent);
+  deepDiveContent = cleanText(deepDiveContent);
 
   // Process [[wiki-links]] inline within text
   const processWikiLinks = (text) => {
@@ -160,7 +162,7 @@ const LearningHUD = () => {
       className="hud-container"
       style={tiltStyle}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      // No onMouseLeave
     >
       {/* Header */}
       <div className="hud-header">

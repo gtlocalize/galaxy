@@ -69,7 +69,7 @@ app.get('/galaxy-api/expand-stream', async (req, res) => {
 
     const prompt = `You are an expert tutor creating educational content about "${topic}".
 
-Write a comprehensive educational article with this EXACT structure. Do not deviate from the headers.
+Write a comprehensive educational article with this EXACT structure. Ensure there are blank lines between headers and content.
 
 # ${topic}
 
@@ -97,8 +97,8 @@ Keep the diagram simple but informative.
 IMPORTANT:
 - Wrap 6-10 key related terms in [[double brackets]] like [[Neural Networks]]
 - Use markdown formatting
-- Ensure the Mermaid diagram is valid syntax
-- STRICTLY use the headers provided above so the UI can split the content correctly.`;
+- STRICTLY use the headers provided above so the UI can split the content correctly.
+- ENSURE NEWLINES after headers.`;
 
     const result = await model.generateContentStream(prompt);
     let fullText = '';

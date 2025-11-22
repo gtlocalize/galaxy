@@ -13,8 +13,8 @@ const GalaxyScene = () => {
   useEffect(() => {
     if (fgRef.current) {
       // Configure Forces
-      fgRef.current.d3Force('charge').strength(-300);
-      fgRef.current.d3Force('link').distance(100);
+      fgRef.current.d3Force('charge').strength(-150); // Reduced repulsion to keep cluster tighter
+      fgRef.current.d3Force('link').distance(40); // Reduced distance significantly
 
       const scene = fgRef.current.scene();
 
