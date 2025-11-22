@@ -82,11 +82,33 @@ const GalaxyScene = () => {
     // await expandNode(id); 
   }, [setActiveNode]);
 
+  // Create circular particle texture
+  const createCircleTexture = useCallback(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+
+    // Draw soft circular gradient
+    const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+    gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 32, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+  }, []);
+
   // Custom Node Object: Particle Cloud ("Spongey Planet" made of stars)
   const nodeThreeObject = useCallback((node) => {
     const group = new THREE.Group();
     const color = new THREE.Color(getCategoryColor(node.category) || node.color || '#00ffff');
     const radius = node.val ? node.val / 5 : 4;
+    const circleTexture = createCircleTexture();
 
     // 1. Dense Particle Cloud - many tiny stars forming the planet
     const particleCount = 400;
@@ -117,11 +139,13 @@ const GalaxyScene = () => {
 
     const particlesMaterial = new THREE.PointsMaterial({
       color: color,
-      size: 1.0,
+      size: 1.2,
+      map: circleTexture,
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,
-      sizeAttenuation: true
+      sizeAttenuation: true,
+      depthWrite: false
     });
 
     const cloud = new THREE.Points(particlesGeometry, particlesMaterial);
@@ -150,10 +174,12 @@ const GalaxyScene = () => {
 
     const haloMaterial = new THREE.PointsMaterial({
       color: color,
-      size: 0.6,
+      size: 0.8,
+      map: circleTexture,
       transparent: true,
       opacity: 0.4,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
 
     const halo = new THREE.Points(haloGeometry, haloMaterial);
@@ -171,7 +197,7 @@ const GalaxyScene = () => {
     group.add(core);
 
     return group;
-  }, []);
+  }, [createCircleTexture]);
 
   return (
     <div style={{ width: '100%', height: '100%', background: '#000' }}>

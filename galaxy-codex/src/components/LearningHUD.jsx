@@ -62,7 +62,7 @@ const LearningHUD = () => {
       <div className="hud-body">
         <h1 className="hud-main-title">{currentNode.name}</h1>
 
-        {/* Tabs */}
+        {/* Content - handle both tabs format and legacy content format */}
         {currentNode.tabs ? (
           <>
             <div className="hud-tabs">
@@ -87,6 +87,13 @@ const LearningHUD = () => {
               )}
             </div>
           </>
+        ) : currentNode.content ? (
+          // Legacy format - just content string, no tabs
+          <div className="hud-content-scroll">
+            <div className="rich-content">
+              {renderContent(currentNode.content)}
+            </div>
+          </div>
         ) : (
           <div className="hud-loading">
             <div className="spinner"></div>
