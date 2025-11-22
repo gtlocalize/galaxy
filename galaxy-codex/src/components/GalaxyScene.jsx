@@ -7,7 +7,6 @@ import useStore from '../store/useStore';
 const GalaxyScene = () => {
   const fgRef = useRef();
   const { graphData, expandNode, setActiveNode } = useStore();
-  const rotationRef = useRef(0);
   const coreRef = useRef(null); // Ref for the Sentient Core animation
 
   // 1. Add Starfield, Lights, and Post-Processing
@@ -17,7 +16,7 @@ const GalaxyScene = () => {
 
       // Create stars
       const starGeometry = new THREE.BufferGeometry();
-      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0.8 });
+      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0.4 }); // Reduced opacity
       const starVertices = [];
       for (let i = 0; i < 5000; i++) {
         const x = (Math.random() - 0.5) * 3000;
@@ -37,9 +36,9 @@ const GalaxyScene = () => {
       pointLight.position.set(100, 100, 100);
       scene.add(pointLight);
 
-      // BLOOM EFFECT
+      // BLOOM EFFECT - Reduced Strength
       const bloomPass = new UnrealBloomPass();
-      bloomPass.strength = 2.0;
+      bloomPass.strength = 0.4; // Reduced from 2.0
       bloomPass.radius = 0.5;
       bloomPass.threshold = 0.1;
 
@@ -50,20 +49,11 @@ const GalaxyScene = () => {
     }
   }, []);
 
-  // 2. Animation Loop (Auto-rotation + Sentient Core Pulse)
+  // 2. Animation Loop (Sentient Core Pulse only)
   useEffect(() => {
     let frameId;
     const animate = (time) => {
-      // A. Auto-rotation
-      if (fgRef.current) {
-        rotationRef.current += 0.0005;
-        const dist = 400;
-        const x = dist * Math.sin(rotationRef.current);
-        const z = dist * Math.cos(rotationRef.current);
-        fgRef.current.cameraPosition({ x, z });
-      }
-
-      // B. Sentient Core Animation
+      // Sentient Core Animation
       if (coreRef.current) {
         // Rotate whole system
         coreRef.current.rotation.y += 0.002;
