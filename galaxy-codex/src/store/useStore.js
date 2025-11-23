@@ -158,12 +158,21 @@ AI is transforming fields such as [[Natural Language Processing]], [[Computer Vi
     }
 
     // 3. Create new node
+    // Spawn near parent to prevent physics explosion
+    const parentNode = graphData.nodes.find(n => n.id === parentNodeId);
+    const spawnPos = parentNode && parentNode.x !== undefined ? {
+        x: parentNode.x + (Math.random() - 0.5) * 20,
+        y: parentNode.y + (Math.random() - 0.5) * 20,
+        z: parentNode.z + (Math.random() - 0.5) * 20
+    } : {}; // Let engine decide if no parent pos
+
     const newNode = {
       id: newNodeId,
       name: term,
       val: 20,
       color: '#aaddff', // Default, will be updated by category later
-      parent: parentNodeId
+      parent: parentNodeId,
+      ...spawnPos
     };
 
     const newLink = {

@@ -319,10 +319,10 @@ const GalaxyScene = () => {
         backgroundColor="#000000"
         showNavInfo={false}
 
-        // Physics - Spaced out
-        d3AlphaDecay={0.01}
-        d3VelocityDecay={0.1}
-        cooldownTicks={300}
+        // Physics - Stabilized
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.4} // Higher friction to stop explosion
+        cooldownTicks={100}
         onEngineStop={() => fgRef.current.zoomToFit(400)} // Optional: fit to view when done
 
         // Link Styling
