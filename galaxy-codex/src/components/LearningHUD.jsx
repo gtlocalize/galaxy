@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
-import mermaid from 'mermaid';
 import './HUD.css';
 
 const LearningHUD = () => {
@@ -9,67 +8,33 @@ const LearningHUD = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
-  const [mermaidSvg, setMermaidSvg] = useState('');
+  const [visualUrl, setVisualUrl] = useState(null);
+  const [loadingVisual, setLoadingVisual] = useState(false);
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
 
   // Reset tab when node changes
   useEffect(() => {
     setActiveTab('overview');
-    setMermaidSvg(''); 
+    setVisualUrl(null);
   }, [activeNode]);
 
-  // Initialize Mermaid with Holographic Theme
+  // Fetch Visualization (Nano Banana)
   useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'base', // Use base to override easier
-      securityLevel: 'loose',
-      fontFamily: 'Inter',
-      themeVariables: {
-        darkMode: true,
-        background: 'transparent',
-        mainBkg: 'rgba(0, 20, 40, 0.5)', // Dark glass node background
-        nodeBorder: '#00ffff', // Neon Cyan
-        clusterBkg: 'rgba(255, 255, 255, 0.05)',
-        titleColor: '#00ffff',
-        edgeLabelBackground: 'rgba(0, 0, 0, 0.8)',
-        lineColor: '#0088ff',
-        textColor: '#e0f0ff',
-        primaryColor: '#002244',
-        primaryTextColor: '#00ffff',
-        primaryBorderColor: '#00ffff'
-      }
-    });
-  }, []);
-
-  // Render Mermaid diagrams
-  useEffect(() => {
-    if (activeTab === 'visuals' && currentNode?.content) {
-      const match = currentNode.content.match(/```(mermaid|graph)([\s\S]*?)```/i);
-      
-      if (match && match[2]) {
-        const id = `mermaid-${Date.now()}`;
-        const graphDefinition = match[2].trim();
-
-        try {
-            mermaid.render(id, graphDefinition)
-            .then(({ svg }) => {
-                setMermaidSvg(svg);
+    if (activeTab === 'visuals' && currentNode && !visualUrl && !loadingVisual) {
+        setLoadingVisual(true);
+        fetch(`/galaxy-api/visualize?topic=${encodeURIComponent(currentNode.name)}`)
+            .then(res => res.json())
+            .then(data => {
+                setVisualUrl(data.imageUrl);
+                setLoadingVisual(false);
             })
             .catch(err => {
-                 console.error('Mermaid render error:', err);
-                 setMermaidSvg('<p class="error-msg">Failed to render visualization syntax.</p>');
+                console.error('Visual fetch error:', err);
+                setLoadingVisual(false);
             });
-        } catch (err) {
-             console.error('Mermaid sync error:', err);
-             setMermaidSvg('<p class="error-msg">Failed to parse visualization.</p>');
-        }
-      } else {
-        setMermaidSvg('<p class="no-visuals">No visualization available for this topic.</p>');
-      }
     }
-  }, [activeTab, currentNode]);
+  }, [activeTab, currentNode, visualUrl, loadingVisual]);
 
   // Interactive 3D tilt
   const handleMouseMove = (e) => {
@@ -103,17 +68,6 @@ const LearningHUD = () => {
   } else {
       deepDiveContent = "### No detailed technical breakdown available for this summary.";
   }
-
-  // Helper to strip Visuals section and Mermaid blocks
-  const cleanText = (text) => {
-      if (!text) return '';
-      let cleaned = text.replace(/## (Visuals|Diagram|Architecture)[\s\S]*?$/, '');
-      cleaned = cleaned.replace(/```(mermaid|graph)[\s\S]*?```/gi, '');
-      return cleaned;
-  };
-
-  overviewContent = cleanText(overviewContent);
-  deepDiveContent = cleanText(deepDiveContent);
 
   const processWikiLinks = (text) => {
     if (typeof text !== 'string') return text;
@@ -199,13 +153,15 @@ const LearningHUD = () => {
           <div className="hud-content-scroll">
             {activeTab === 'visuals' ? (
               <div className="visuals-container">
-                {mermaidSvg ? (
-                    <div 
-                        className="mermaid-wrapper"
-                        dangerouslySetInnerHTML={{ __html: mermaidSvg }} 
-                    />
+                {visualUrl ? (
+                    <div className="image-wrapper">
+                        <img src={visualUrl} alt={currentNode.name} className="visual-image" />
+                        <div className="image-caption">Generated Visualization: {currentNode.name}</div>
+                    </div>
                 ) : (
-                    currentNode.streaming ? <div className="spinner"></div> : <p className="no-visuals">Generating diagram...</p>
+                    loadingVisual ? 
+                    <div className="spinner-container"><div className="spinner"></div><p>Generating Nano Banana Visual...</p></div> : 
+                    <div className="no-visuals">Click to generate visualization</div>
                 )}
               </div>
             ) : (

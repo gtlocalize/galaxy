@@ -1,54 +1,48 @@
-/* Mermaid Wrapper */
-.mermaid-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 10px;
+/* Image Visualization (Nano Banana) */
+.visuals-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
 }
 
-.mermaid-wrapper svg {
-  max-width: 100%;
-  height: auto;
-  background-color: transparent !important; /* Force transparency */
+.image-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+    border: 1px solid rgba(0, 255, 255, 0.3);
 }
 
-/* Ensure text in SVG is visible */
-.mermaid-wrapper svg text {
-  fill: #e0f0ff !important;
-  font-family: 'Inter', sans-serif !important;
+.visual-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.5s ease;
 }
 
-.mermaid-wrapper svg .node rect,
-.mermaid-wrapper svg .node circle,
-.mermaid-wrapper svg .node polygon {
-  fill: rgba(0, 50, 100, 0.5) !important;
-  stroke: #00ffff !important;
-  stroke-width: 1.5px !important;
+.visual-image:hover {
+    transform: scale(1.05);
 }
 
-.mermaid-wrapper svg .edgePath .path {
-  stroke: #557799 !important;
-  stroke-width: 1.5px !important;
+.image-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #00ffff;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    backdrop-filter: blur(4px);
 }
 
-.mermaid-wrapper svg .edgeLabel {
-  background-color: #000 !important;
-  color: #aaddff !important;
-}
-
-.error-msg {
-    color: #ff5555;
-    font-style: italic;
-    text-align: center;
-    padding: 20px;
-}
-
-.no-visuals {
-    color: #557799;
-    font-style: italic;
-    text-align: center;
-    padding: 20px;
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #00ffff;
 }
