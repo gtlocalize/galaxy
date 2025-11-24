@@ -35,7 +35,7 @@ loadCache();
 // Gemini Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'YOUR_API_KEY');
 // Text Model
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Using 1.5 Pro for better reasoning
+const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" }); // Using Gemini 3 Pro Preview
 // Image Model (Nano Banana)
 const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
 
@@ -149,9 +149,10 @@ app.get('/galaxy-api/visualize', async (req, res) => {
 
   try {
     console.log(`Generating Nano Banana visualization for: ${topic}`);
-    // Strict prompt for technical accuracy
+    // Strict prompt for technical accuracy and portrait orientation
     const prompt = `Technical diagram, flowchart, or schematic of ${topic}. 
         Style: Blueprint, Neon Schematic, Network Graph, White lines on dark background. 
+        Format: Vertical Portrait Orientation, Tall Aspect Ratio (9:16).
         High contrast, educational, informative, detailed.`;
 
     // Attempt to use Imagen model

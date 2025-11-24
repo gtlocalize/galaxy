@@ -141,7 +141,7 @@ const GalaxyScene = () => {
   const handleClick = useCallback(async (node) => {
     if (!fgRef.current) return;
     const { x, y, z, id } = node;
-    const distance = 60;
+    const distance = 140; // Increased distance for better framing
     const distRatio = 1 + distance / Math.hypot(x, y, z);
 
     let targetX = 0, targetY = 0, targetZ = 0;
