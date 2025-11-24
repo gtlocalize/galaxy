@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import * as THREE from 'three';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import SpriteText from 'three-spritetext';
 import useStore from '../store/useStore';
 
 const GalaxyScene = () => {
@@ -13,8 +14,13 @@ const GalaxyScene = () => {
   useEffect(() => {
     if (fgRef.current) {
       // Configure Forces
-      fgRef.current.d3Force('charge').strength(-150); // Reduced repulsion to keep cluster tighter
-      fgRef.current.d3Force('link').distance(40); // Reduced distance significantly
+      // Configure Forces
+      fgRef.current.d3Force('charge').strength(-200); // Repulsion
+      fgRef.current.d3Force('link').distance(50).strength(1); // Strong tether
+      fgRef.current.d3Force('center', null); // Remove default center to use custom if needed, or keep default
+      // Add collision to prevent overlap
+      // fgRef.current.d3Force('collide', d3.forceCollide(node => 10)); // Requires d3 import, skipping for now, relying on charge
+
 
       const scene = fgRef.current.scene();
 
@@ -305,6 +311,14 @@ const GalaxyScene = () => {
     });
     const core = new THREE.Mesh(coreGeo, coreMat);
     group.add(core);
+
+    // 4. Text Label
+    const sprite = new SpriteText(node.name);
+    sprite.color = '#00ffff';
+    sprite.textHeight = 2;
+    sprite.position.set(0, radius + 4, 0);
+    sprite.fontFace = 'Orbitron, sans-serif';
+    group.add(sprite);
 
     return group;
   }, [createCircleTexture]);
