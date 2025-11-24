@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
 import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
 import './HUD.css';
 
 const LearningHUD = () => {
@@ -8,10 +9,21 @@ const LearningHUD = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+  const mermaidRef = useRef(null);
   const [visualUrl, setVisualUrl] = useState(null);
   const [loadingVisual, setLoadingVisual] = useState(false);
 
   const currentNode = graphData.nodes.find(n => n.id === activeNode);
+
+  // Initialize Mermaid
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+      fontFamily: 'Orbitron'
+    });
+  }, []);
 
   // Reset tab when node changes
   useEffect(() => {
@@ -36,6 +48,29 @@ const LearningHUD = () => {
         });
     }
   }, [currentNode, visualUrl, loadingVisual]);
+
+  // Render Mermaid Diagram
+  useEffect(() => {
+    if (activeTab === 'visuals' && currentNode?.content && mermaidRef.current) {
+      const mermaidMatch = currentNode.content.match(/```mermaid([\s\S]*?)```/);
+      if (mermaidMatch && mermaidMatch[1]) {
+        try {
+          mermaidRef.current.innerHTML = ''; // Clear previous
+          const id = `mermaid-${Date.now()}`;
+          mermaid.render(id, mermaidMatch[1]).then(({ svg }) => {
+            if (mermaidRef.current) {
+              mermaidRef.current.innerHTML = svg;
+            }
+          });
+        } catch (err) {
+          console.error('Mermaid render error:', err);
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = '<p class="error">Diagram rendering failed</p>';
+          }
+        }
+      }
+    }
+  }, [activeTab, currentNode]);
 
   // Interactive 3D tilt
   const handleMouseMove = (e) => {
@@ -154,15 +189,29 @@ const LearningHUD = () => {
           <div className="hud-content-scroll">
             {activeTab === 'visuals' ? (
               <div className="visuals-container">
-                {visualUrl ? (
-                  <div className="image-wrapper">
-                    <img src={visualUrl} alt={currentNode.name} className="visual-image" />
-                    <div className="image-caption">Generated Visualization: {currentNode.name}</div>
+                {/* 1. Nano Banana Image */}
+                {visualUrl && (
+                  <div className="visual-block">
+                    <h3>Nano Banana Visualization</h3>
+                    <img
+                      src={visualUrl}
+                      alt={`Visualization of ${currentNode.name}`}
+                      className="generated-image"
+                    />
                   </div>
-                ) : (
-                  loadingVisual ?
-                    <div className="spinner-container"><div className="spinner"></div><p>Generating Nano Banana Visual...</p></div> :
-                    <div className="no-visuals">Click to generate visualization</div>
+                )}
+
+                {/* 2. Mermaid Diagram */}
+                <div className="visual-block">
+                  <h3>Structural Diagram</h3>
+                  <div className="mermaid-wrapper" ref={mermaidRef}>
+                    {/* Mermaid renders here via useEffect */}
+                  </div>
+                </div>
+
+                {/* 3. Fallback */}
+                {!visualUrl && !currentNode.content?.includes('```mermaid') && (
+                  <p className="no-visuals">Generating visuals... (or none available)</p>
                 )}
               </div>
             ) : (

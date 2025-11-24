@@ -110,7 +110,7 @@ const GalaxyScene = () => {
                 // Scale text based on distance to maintain readability
                 // But clamp it so it doesn't get ridiculously huge or tiny
                 const scale = Math.max(4, Math.min(20, dist / 15));
-                obj.scale.set(scale * 2, scale, 1); // Aspect ratio adjustment
+                obj.scale.set(scale, scale, 1); // Uniform scaling to fix squished text
 
                 // Fade out when getting far
                 obj.material.opacity = Math.max(0, 1 - (dist / 600));

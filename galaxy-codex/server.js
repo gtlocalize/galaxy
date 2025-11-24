@@ -35,9 +35,42 @@ loadCache();
 // Gemini Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'YOUR_API_KEY');
 // Text Model
-const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Using 1.5 Pro for better reasoning
 // Image Model (Nano Banana)
-const imageModel = genAI.getGenerativeModel({ model: "gemini-3.0-pro-image" }); // Or "imagen-3.0-generate-001"
+const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
+
+const SYSTEM_PROMPT_TEMPLATE = `
+You are the Galaxy Codex, an advanced AI interface for exploring human knowledge.
+Your goal is to provide structured, educational content about any topic requested.
+
+Format your response in strictly structured Markdown:
+
+# {TOPIC_PLACEHOLDER}
+
+## Overview
+A concise, high-level summary of the topic (2-3 sentences).
+
+## Key Concepts
+- **Concept 1**: Definition
+- **Concept 2**: Definition
+- **Concept 3**: Definition
+
+## Deep Dive
+Detailed explanation, history, or technical breakdown. Use subsections if needed.
+
+## Visuals
+Create a Mermaid.js diagram (graph TD, sequenceDiagram, or mindmap) illustrating the concept, process, or hierarchy.
+Wrap it in a \`\`\`mermaid code block.
+
+## Connections
+List 3-5 related topics for further exploration.
+
+IMPORTANT:
+- Wrap 6-10 key related terms in [[double brackets]] like [[Neural Networks]]
+- Use markdown formatting
+- STRICTLY use the headers provided above so the UI can split the content correctly.
+- ENSURE NEWLINES after headers.
+`;
 
 // Streaming endpoint using Server-Sent Events
 app.get('/galaxy-api/expand-stream', async (req, res) => {
@@ -70,30 +103,7 @@ app.get('/galaxy-api/expand-stream', async (req, res) => {
   try {
     console.log(`Streaming content for: ${topic}`);
 
-    const prompt = `You are an expert tutor creating educational content about "${topic}".
-
-Write a comprehensive educational article with this EXACT structure. Ensure there are blank lines between headers and content.
-
-# ${topic}
-
-## Overview
-[Brief high-level summary: What it is and why it matters. Keep it under 150 words.]
-
-## Key Concepts
-[3-5 core ideas explained clearly with [[wiki-links]] to related topics]
-
-## Deep Dive
-[Detailed technical explanation of mechanics, algorithms, or processes. Go into depth here.]
-[Include Real-World Applications here as well]
-
-## Connections
-[How it relates to other fields - use [[wiki-links]]]
-
-IMPORTANT:
-- Wrap 6-10 key related terms in [[double brackets]] like [[Neural Networks]]
-- Use markdown formatting
-- STRICTLY use the headers provided above so the UI can split the content correctly.
-- ENSURE NEWLINES after headers.`;
+    const prompt = SYSTEM_PROMPT_TEMPLATE.replace('{TOPIC_PLACEHOLDER}', topic);
 
     const result = await model.generateContentStream(prompt);
     let fullText = '';
@@ -127,52 +137,61 @@ IMPORTANT:
   }
 });
 
-// Image Generation Endpoint (Nano Banana)
+// Image Generation Endpoint
 app.get('/galaxy-api/visualize', async (req, res) => {
   const { topic } = req.query;
-  if (!topic) return res.status(400).json({ error: 'Topic is required' });
+  if (!topic) return res.status(400).json({ error: 'Topic required' });
 
-  // Check cache for image
+  // Check cache
   if (cache[topic] && cache[topic].imageUrl) {
     return res.json({ imageUrl: cache[topic].imageUrl });
   }
 
   try {
     console.log(`Generating Nano Banana visualization for: ${topic}`);
+    // Strict prompt for technical accuracy
     const prompt = `Technical diagram, flowchart, or schematic of ${topic}. 
         Style: Blueprint, Neon Schematic, Network Graph, White lines on dark background. 
         High contrast, educational, informative, detailed.`;
 
-    // Mocking the specific call structure as SDKs vary for image
-    // Assuming generateImages returns { images: [{ url: ... } | { base64: ... }] }
-    // Or generateContent with media response.
+    // Attempt to use Imagen model
+    // Note: This requires an API key with access to Imagen
+    const imageModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
 
-    // For standard Gemini Multimodal (simulated call structure):
-    // const result = await imageModel.generateContent(prompt); 
-    // This usually returns text. Real image generation needs 'imagen' endpoint.
+    // This is a speculative call structure for Imagen in the SDK. 
+    // If this fails, we catch the error and inform the user.
+    // We do NOT silently fallback to "AI slop".
+    const result = await imageModel.generateContent(prompt);
+    const response = await result.response;
 
-    // FALLBACK MOCK for demo (since I can't guarantee the API key has Image permissions):
-    // I'll try to use a public placeholder service that looks sci-fi if the API fails or isn't configured.
-    // But sticking to the "Nano Banana" request, I'll assume the backend handles it.
+    // Assuming response contains image data (this varies by SDK version/model)
+    // If we can't get a URL, we might get base64.
+    // For now, if this throws, we go to catch.
 
-    // REAL IMPLEMENTATION STUB:
-    // const response = await imageModel.generateImage({ prompt, n: 1, size: "1024x1024" });
-    // const imageUrl = response.images[0].url;
+    // If the SDK returns text instead of image (common with wrong model), throw.
+    if (!response.candidates || !response.candidates[0].content.parts[0].inlineData) {
+      throw new Error("Model returned text, not image. Check model permissions.");
+    }
 
-    // Use Pollinations.ai for free, real-time AI image generation (Stable Diffusion)
-    // This fits the "Nano Banana" requirement perfectly as it generates actual images from text.
-    const promptEncoded = encodeURIComponent(`technical diagram flowchart schematic of ${topic}, neon blueprint, network graph, white on dark, educational, detailed, 4k`);
-    const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1024&height=600&nologo=true`;
+    const base64Image = response.candidates[0].content.parts[0].inlineData.data;
+    const mimeType = response.candidates[0].content.parts[0].inlineData.mimeType;
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
 
     // Cache it
-    cache[topic] = { ...cache[topic], imageUrl };
+    if (!cache[topic]) cache[topic] = {};
+    cache[topic].imageUrl = imageUrl;
     await saveCache();
 
     res.json({ imageUrl });
 
   } catch (error) {
-    console.error('Image Gen Error:', error);
-    res.status(500).json({ error: 'Failed to generate image' });
+    console.error('Image generation error:', error);
+    // Return explicit error to user so they know to check API key
+    res.status(500).json({
+      error: 'Image Generation Failed',
+      details: error.message,
+      hint: 'Ensure GEMINI_API_KEY has access to imagen-3.0-generate-001'
+    });
   }
 });
 
