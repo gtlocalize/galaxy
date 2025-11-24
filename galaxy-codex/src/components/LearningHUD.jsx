@@ -19,30 +19,31 @@ const LearningHUD = () => {
     setVisualUrl(null);
   }, [activeNode]);
 
-  // Fetch Visualization (Nano Banana)
+  // Fetch Visualization (Nano Banana) - Parallel Fetch
   useEffect(() => {
-    if (activeTab === 'visuals' && currentNode && !visualUrl && !loadingVisual) {
-        setLoadingVisual(true);
-        fetch(`/galaxy-api/visualize?topic=${encodeURIComponent(currentNode.name)}`)
-            .then(res => res.json())
-            .then(data => {
-                setVisualUrl(data.imageUrl);
-                setLoadingVisual(false);
-            })
-            .catch(err => {
-                console.error('Visual fetch error:', err);
-                setLoadingVisual(false);
-            });
+    if (currentNode && !visualUrl && !loadingVisual) {
+      setLoadingVisual(true);
+      // Fetch immediately, don't wait for tab switch
+      fetch(`/galaxy-api/visualize?topic=${encodeURIComponent(currentNode.name)}`)
+        .then(res => res.json())
+        .then(data => {
+          setVisualUrl(data.imageUrl);
+          setLoadingVisual(false);
+        })
+        .catch(err => {
+          console.error('Visual fetch error:', err);
+          setLoadingVisual(false);
+        });
     }
-  }, [activeTab, currentNode, visualUrl, loadingVisual]);
+  }, [currentNode, visualUrl, loadingVisual]);
 
   // Interactive 3D tilt
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5; 
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: -y * 15, y: x * 15 }); 
+    setTilt({ x: -y * 15, y: x * 15 });
   };
 
   if (!currentNode) return null;
@@ -53,20 +54,20 @@ const LearningHUD = () => {
 
   const deepDiveMarkers = ['## Deep Dive', '## How It Works', '## Technical Details'];
   let splitIndex = -1;
-  
+
   for (const marker of deepDiveMarkers) {
-      const idx = currentNode.content?.indexOf(marker);
-      if (idx !== -1) {
-          splitIndex = idx;
-          break;
-      }
+    const idx = currentNode.content?.indexOf(marker);
+    if (idx !== -1) {
+      splitIndex = idx;
+      break;
+    }
   }
 
   if (splitIndex !== -1) {
     overviewContent = currentNode.content.substring(0, splitIndex);
     deepDiveContent = currentNode.content.substring(splitIndex);
   } else {
-      deepDiveContent = "### No detailed technical breakdown available for this summary.";
+    deepDiveContent = "### No detailed technical breakdown available for this summary.";
   }
 
   const processWikiLinks = (text) => {
@@ -154,13 +155,13 @@ const LearningHUD = () => {
             {activeTab === 'visuals' ? (
               <div className="visuals-container">
                 {visualUrl ? (
-                    <div className="image-wrapper">
-                        <img src={visualUrl} alt={currentNode.name} className="visual-image" />
-                        <div className="image-caption">Generated Visualization: {currentNode.name}</div>
-                    </div>
+                  <div className="image-wrapper">
+                    <img src={visualUrl} alt={currentNode.name} className="visual-image" />
+                    <div className="image-caption">Generated Visualization: {currentNode.name}</div>
+                  </div>
                 ) : (
-                    loadingVisual ? 
-                    <div className="spinner-container"><div className="spinner"></div><p>Generating Nano Banana Visual...</p></div> : 
+                  loadingVisual ?
+                    <div className="spinner-container"><div className="spinner"></div><p>Generating Nano Banana Visual...</p></div> :
                     <div className="no-visuals">Click to generate visualization</div>
                 )}
               </div>

@@ -14,13 +14,9 @@ const GalaxyScene = () => {
   useEffect(() => {
     if (fgRef.current) {
       // Configure Forces
-      // Configure Forces
-      fgRef.current.d3Force('charge').strength(-200); // Repulsion
-      fgRef.current.d3Force('link').distance(50).strength(1); // Strong tether
-      fgRef.current.d3Force('center', null); // Remove default center to use custom if needed, or keep default
-      // Add collision to prevent overlap
-      // fgRef.current.d3Force('collide', d3.forceCollide(node => 10)); // Requires d3 import, skipping for now, relying on charge
-
+      fgRef.current.d3Force('charge').strength(-80); // Low repulsion to prevent explosion
+      fgRef.current.d3Force('link').distance(40).strength(2); // Strong, short links
+      // fgRef.current.d3Force('center', null); // Keep default center to pull things back
 
       const scene = fgRef.current.scene();
 
@@ -92,6 +88,35 @@ const GalaxyScene = () => {
         if (shell) {
           shell.rotation.z -= 0.001;
           shell.rotation.x -= 0.001;
+        }
+      }
+
+      // LOD & Animation Loop
+      if (fgRef.current) {
+        const camera = fgRef.current.camera();
+        const scene = fgRef.current.scene();
+
+        if (camera && scene) {
+          scene.traverse((obj) => {
+            // Check if it's a SpriteText (has .text property)
+            if (obj.isSprite && obj.text) {
+              const dist = camera.position.distanceTo(obj.position);
+
+              // LOD Logic
+              if (dist > 600) {
+                obj.visible = false; // Hide completely when very far
+              } else {
+                obj.visible = true;
+                // Scale text based on distance to maintain readability
+                // But clamp it so it doesn't get ridiculously huge or tiny
+                const scale = Math.max(4, Math.min(20, dist / 15));
+                obj.scale.set(scale * 2, scale, 1); // Aspect ratio adjustment
+
+                // Fade out when getting far
+                obj.material.opacity = Math.max(0, 1 - (dist / 600));
+              }
+            }
+          });
         }
       }
 
@@ -334,8 +359,8 @@ const GalaxyScene = () => {
         showNavInfo={false}
 
         // Physics - Stabilized
-        d3AlphaDecay={0.02}
-        d3VelocityDecay={0.4} // Higher friction to stop explosion
+        d3AlphaDecay={0.05} // Higher decay = faster settling
+        d3VelocityDecay={0.6} // High friction to stop explosion
         cooldownTicks={100}
         onEngineStop={() => fgRef.current.zoomToFit(400)} // Optional: fit to view when done
 

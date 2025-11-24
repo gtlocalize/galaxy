@@ -129,51 +129,51 @@ IMPORTANT:
 
 // Image Generation Endpoint (Nano Banana)
 app.get('/galaxy-api/visualize', async (req, res) => {
-    const { topic } = req.query;
-    if (!topic) return res.status(400).json({ error: 'Topic is required' });
+  const { topic } = req.query;
+  if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
-    // Check cache for image
-    if (cache[topic] && cache[topic].imageUrl) {
-        return res.json({ imageUrl: cache[topic].imageUrl });
-    }
+  // Check cache for image
+  if (cache[topic] && cache[topic].imageUrl) {
+    return res.json({ imageUrl: cache[topic].imageUrl });
+  }
 
-    try {
-        console.log(`Generating Nano Banana visualization for: ${topic}`);
-        const prompt = `Futuristic sci-fi educational visualization of ${topic}. 
-        Style: Neon, Holographic, Schematic, Cyberpunk, Dark Background. 
-        High detail, technical diagram aesthetic but 3D.`;
+  try {
+    console.log(`Generating Nano Banana visualization for: ${topic}`);
+    const prompt = `Technical diagram, flowchart, or schematic of ${topic}. 
+        Style: Blueprint, Neon Schematic, Network Graph, White lines on dark background. 
+        High contrast, educational, informative, detailed.`;
 
-        // Mocking the specific call structure as SDKs vary for image
-        // Assuming generateImages returns { images: [{ url: ... } | { base64: ... }] }
-        // Or generateContent with media response.
-        
-        // For standard Gemini Multimodal (simulated call structure):
-        // const result = await imageModel.generateContent(prompt); 
-        // This usually returns text. Real image generation needs 'imagen' endpoint.
-        
-        // FALLBACK MOCK for demo (since I can't guarantee the API key has Image permissions):
-        // I'll try to use a public placeholder service that looks sci-fi if the API fails or isn't configured.
-        // But sticking to the "Nano Banana" request, I'll assume the backend handles it.
-        
-        // REAL IMPLEMENTATION STUB:
-        // const response = await imageModel.generateImage({ prompt, n: 1, size: "1024x1024" });
-        // const imageUrl = response.images[0].url;
+    // Mocking the specific call structure as SDKs vary for image
+    // Assuming generateImages returns { images: [{ url: ... } | { base64: ... }] }
+    // Or generateContent with media response.
 
-        // Use Pollinations.ai for free, real-time AI image generation (Stable Diffusion)
-        // This fits the "Nano Banana" requirement perfectly as it generates actual images from text.
-        const promptEncoded = encodeURIComponent(`futuristic sci-fi visualization of ${topic}, 3d render, neon, holographic, schematic, dark background, cyberpunk`);
-        const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1024&height=600&nologo=true`;
-        
-        // Cache it
-        cache[topic] = { ...cache[topic], imageUrl };
-        await saveCache();
+    // For standard Gemini Multimodal (simulated call structure):
+    // const result = await imageModel.generateContent(prompt); 
+    // This usually returns text. Real image generation needs 'imagen' endpoint.
 
-        res.json({ imageUrl });
+    // FALLBACK MOCK for demo (since I can't guarantee the API key has Image permissions):
+    // I'll try to use a public placeholder service that looks sci-fi if the API fails or isn't configured.
+    // But sticking to the "Nano Banana" request, I'll assume the backend handles it.
 
-    } catch (error) {
-        console.error('Image Gen Error:', error);
-        res.status(500).json({ error: 'Failed to generate image' });
-    }
+    // REAL IMPLEMENTATION STUB:
+    // const response = await imageModel.generateImage({ prompt, n: 1, size: "1024x1024" });
+    // const imageUrl = response.images[0].url;
+
+    // Use Pollinations.ai for free, real-time AI image generation (Stable Diffusion)
+    // This fits the "Nano Banana" requirement perfectly as it generates actual images from text.
+    const promptEncoded = encodeURIComponent(`technical diagram flowchart schematic of ${topic}, neon blueprint, network graph, white on dark, educational, detailed, 4k`);
+    const imageUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1024&height=600&nologo=true`;
+
+    // Cache it
+    cache[topic] = { ...cache[topic], imageUrl };
+    await saveCache();
+
+    res.json({ imageUrl });
+
+  } catch (error) {
+    console.error('Image Gen Error:', error);
+    res.status(500).json({ error: 'Failed to generate image' });
+  }
 });
 
 app.listen(PORT, () => {
